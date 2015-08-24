@@ -60,7 +60,11 @@ class Conference(ndb.Model):
     endDate         = ndb.DateProperty()
     maxAttendees    = ndb.IntegerProperty()
     seatsAvailable  = ndb.IntegerProperty()
-    sessionKeys = ndb.KeyProperty(kind='Session', repeated=True)
+    # sessionKeys = ndb.KeyProperty(kind='Session', repeated=True)
+
+    @property
+    def sessions(self):
+        return Session.query(ancestor=self.key)
 
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
