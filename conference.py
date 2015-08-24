@@ -548,5 +548,40 @@ class ConferenceApi(remote.Service):
         """Unregister user for selected conference."""
         return self._conferenceRegistration(request, reg=False)
 
+        # - - - Conference Session - - - - - - - - - - - - - - - - - - - -
+    def _copySessionToForm(self, session):
+        """Copy relevant fields from Session to SessionForm."""
+        form = SessionForm()
+        for field in form.all_fields():
+            if hasattr(session, field.name):
+                # convert Date or Time properties to string; just copy others
+                if field.name in ('date', 'startTime'):
+                    setattr(form, field.name, str(getattr(session, field.name)))
+                else:
+                    setattr(form, field.name, getattr(session, field.name))
+            elif field.name == "websafeConferenceKey":
+                setattr(form, field.name, session.key.urlsafe())
+        form.check_initialized()
+        return form
 
+    # getConferenceSessions(websafeConferenceKey) -- Given a conference, return all sessions
+    def _getConference(self, request, key='websafeConferenceKey'):
+        """ Returns a Conference object from a request. Throws `NotFoundException` when no conference is found. """
+        conf = ndb.Key(urlsafe=getattr(request, key)).get()
+        if not conf:
+            raise endpoints.NotFoundException(
+                'No conference found with key: %s' % request.websafeConferenceKey)
+        return conf
+
+    @endpoints.method(CONF_GET_REQUEST, SessionForms,
+                      path='conference/{websafeConferenceKey}/sessions',
+                      http_method='GET', name='getConferencesCreated')
+    def getConferenceSessions(self, request):
+        """Given a conference, return all sessions"""
+        # get Conference object from request; bail if not found
+        conf = self._getConference(request)
+
+        return SessionForms(
+            items=[self._copySessionToForm(session) for session in conf.sessions]
+        )
 api = endpoints.api_server([ConferenceApi]) # register API
