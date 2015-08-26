@@ -327,7 +327,8 @@ class ConferenceApi(remote.Service):
             name='queryConferences')
     def queryConferences(self, request):
         """Query for conferences."""
-        conferences = self._getQuery(request)
+
+        conferences = self._getQuery(request).fetch()
 
         # need to fetch organiser displayName from profiles
         # get all keys and use get_multi for speed
@@ -337,12 +338,12 @@ class ConferenceApi(remote.Service):
         # put display names in a dict for easier fetching
         names = {}
         for profile in profiles:
-            names[profile.key.id()] = profile.displayName
+            if profile:
+                names[profile.key.id()] = profile.displayName
 
         # return individual ConferenceForm object per Conference
         return ConferenceForms(
-                items=[self._copyConferenceToForm(conf, names[conf.organizerUserId]) for conf in \
-                conferences]
+                items=[self._copyConferenceToForm(conf, names.get(conf.organizerUserId, None)) for conf in conferences]
         )
 
 
