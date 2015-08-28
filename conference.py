@@ -107,6 +107,11 @@ SESSION_BY_SPEAKER_GET_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
     speaker=messages.StringField(1, required=True),
 )
+
+SESSION_WISHLIST_POST_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    sessionKey=messages.StringField(1, required=True)
+)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -564,7 +569,7 @@ class ConferenceApi(remote.Service):
                     setattr(form, field.name, str(getattr(session, field.name)))
                 else:
                     setattr(form, field.name, getattr(session, field.name))
-            elif field.name == "websafeConferenceKey":
+            elif field.name == "websafeKey":
                 setattr(form, field.name, session.key.urlsafe())
         form.check_initialized()
         return form
@@ -658,6 +663,7 @@ class ConferenceApi(remote.Service):
         data['key'] = ndb.Key(Session, s_id, parent=conf.key)
         # delete keys not used by `Session`
         del data['websafeConferenceKey']
+        del data['websafeKey']
         # Add session to datastore
         session = Session(**data)
         session.put()
@@ -670,6 +676,29 @@ class ConferenceApi(remote.Service):
     def createSession(self, request):
         """Create or update Session object, returning SessionForm/request."""
         return self._createSessionObject(request)
+
+
+    @endpoints.method(SESSION_WISHLIST_POST_REQUEST, BooleanMessage,
+                      path='profile/wishlist/{sessionKey}',
+                      http_method='POST', name='addSessionToWishlist')
+    @ndb.transactional(xg=True)
+    def addSessionToWishlist(self, request):
+
+        # get user Profile
+        prof = self._getProfileFromUser()
+        # get session and check if it exists
+        wssk = request.sessionKey
+        session = ndb.Key(urlsafe=wssk).get()
+
+        if not session:
+            raise endpoints.NotFoundException("Session with key %s doesn't exist" % request.sessionKey)
+        # Check if session is already in users wishlist
+        if wssk in prof.sessionKeysInWishList:
+            raise ConflictException("This session is already in your wishlist")
+        # add session to users wishlist
+        prof.sessionKeysInWishList.append(wssk)
+        prof.put()
+        return BooleanMessage(data=True)
 
 
 api = endpoints.api_server([ConferenceApi]) # register API
