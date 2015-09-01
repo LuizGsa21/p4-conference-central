@@ -39,6 +39,7 @@ from models import TeeShirtSize
 from models import Session
 from models import SessionForm
 from models import SessionForms
+from models import SessionQueryForms
 
 from settings import WEB_CLIENT_ID
 from settings import ANDROID_CLIENT_ID
@@ -62,20 +63,29 @@ DEFAULTS = {
 }
 
 OPERATORS = {
-            'EQ':   '=',
-            'GT':   '>',
-            'GTEQ': '>=',
-            'LT':   '<',
-            'LTEQ': '<=',
-            'NE':   '!='
-            }
+    'EQ': '=',
+    'GT': '>',
+    'GTEQ': '>=',
+    'LT': '<',
+    'LTEQ': '<=',
+    'NE': '!='
+}
 
-FIELDS =    {
-            'CITY': 'city',
-            'TOPIC': 'topics',
-            'MONTH': 'month',
-            'MAX_ATTENDEES': 'maxAttendees',
-            }
+CONFERENCE_FIELDS = {
+    'CITY': 'city',
+    'TOPIC': 'topics',
+    'MONTH': 'month',
+    'MAX_ATTENDEES': 'maxAttendees',
+}
+
+SESSION_FIELDS = {
+    'NAME': 'name',
+    'DURATION': 'duration',
+    'TYPE_OF_SESSION': 'typeOfSession',
+    'DATE': 'date',
+    'START_TIME': 'startTime',
+    'SPEAKER': 'speaker'
+}
 
 CONF_GET_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
@@ -286,7 +296,7 @@ class ConferenceApi(remote.Service):
     def _getQuery(self, request):
         """Return formatted query from the submitted filters."""
         q = Conference.query()
-        inequality_filter, filters = self._formatFilters(request.filters)
+        inequality_filter, filters = self._formatFilters(request.filters, CONFERENCE_FIELDS)
 
         # If exists, sort on inequality filter first
         if not inequality_filter:
@@ -303,7 +313,7 @@ class ConferenceApi(remote.Service):
         return q
 
 
-    def _formatFilters(self, filters):
+    def _formatFilters(self, filters, fields):
         """Parse, check validity and format user supplied filters."""
         formatted_filters = []
         inequality_field = None
@@ -312,7 +322,7 @@ class ConferenceApi(remote.Service):
             filtr = {field.name: getattr(f, field.name) for field in f.all_fields()}
 
             try:
-                filtr["field"] = FIELDS[filtr["field"]]
+                filtr["field"] = fields[filtr["field"]]
                 filtr["operator"] = OPERATORS[filtr["operator"]]
             except KeyError:
                 raise endpoints.BadRequestException("Filter contains invalid field or operator.")
@@ -731,6 +741,42 @@ class ConferenceApi(remote.Service):
         # return a set of `SessionForm` objects
         logging.info(sessions)
         return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+
+    def _querySessions(self, filters):
+        q = Session.query()
+        inequality_filter, filters = self._formatFilters(filters, SESSION_FIELDS)
+
+        if inequality_filter:
+            q = q.order(ndb.GenericProperty(inequality_filter))
+
+        for filtr in filters:
+            if filtr["field"] == 'date':
+                # convert date string to a datetime object.
+                try:
+                    filtr['value'] = datetime.strptime(filtr["field"][:10], "%Y-%m-%d").date()
+                except ValueError:
+                    raise endpoints.BadRequestException("Invalid date format. Please use 'YYYY-MM-DD'")
+            elif filtr["field"] == 'startTime':
+                # convert date string to a time object. HH:MM
+                try:
+                    filtr['value'] = datetime.strptime(filtr["field"][:5], "%H:%M").time()
+                except ValueError:
+                    raise endpoints.BadRequestException("Invalid time format. Please use 'HH:MM'")
+            elif filtr['field'] == 'duration':
+                filtr["value"] = int(filtr["value"])
+
+            formatted_query = ndb.query.FilterNode(filtr["field"], filtr["operator"], filtr["value"])
+            return q.filter(formatted_query)
+
+    @endpoints.method(SessionQueryForms, SessionForms,
+                      path='querySessions',
+                      http_method='POST',
+                      name='querySessions')
+    def querySessions(self, request):
+        """ Query for sessions. Uses `SESSION_FIELDS` and `OPERATORS` to construct query. """
+        sessions = self._querySessions(request.filters)
+        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+
 
 
 api = endpoints.api_server([ConferenceApi]) # register API

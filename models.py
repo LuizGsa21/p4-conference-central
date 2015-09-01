@@ -138,3 +138,14 @@ class SessionForms(messages.Message):
     """SessionForm -- multiple SessionForm outbound form message"""
     items = messages.MessageField(SessionForm, 1, repeated=True)
 
+class SessionQueryForm(messages.Message):
+    """SessionQueryForm -- Session query inbound form message"""
+    field = messages.StringField(1)
+    operator = messages.StringField(2)
+    value = messages.StringField(3)
+
+class SessionQueryForms(messages.Message):
+    """SessionQueryForms -- multiple SessionQueryForm inbound form message"""
+    filters = messages.MessageField(SessionQueryForm, 1, repeated=True)
+
+
