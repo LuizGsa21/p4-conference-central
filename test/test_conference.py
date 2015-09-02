@@ -7,7 +7,8 @@ from google.appengine.ext import testbed
 
 from conference import (
     ConferenceApi,
-    CONF_GET_REQUEST
+    CONF_GET_REQUEST,
+    SESSION_BY_TYPE_GET_REQUEST
 
 )
 
@@ -56,3 +57,16 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
             assert sessions[r_session.websafeKey], 'returned an invalid session websafeKey'
 
         print 'Successfully returned all sessions for a given conference'
+
+    def testQuerySession(self):
+        self.initDatabase()
+        form = SessionQueryForms()
+        form.filters = [
+            SessionQueryForm(field='NAME', operator='EQ', value='Google App Engine')
+        ]
+        response = self.api.querySessions(form)
+        r_sessions = response.items
+        assert len(r_sessions) == 1, 'returned an invalid number of sessions'
+        assert r_sessions[0].name == 'Google App Engine', 'returned an invalid session'
+
+        print 'Successfully returned sessions for a given query'
