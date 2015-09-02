@@ -98,4 +98,4 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert len(r_sessions) == 1, 'returned an invalid number of sessions'
         assert r_sessions[0].speaker == 'superman', 'returned an invalid session'
 
-        print 'Successfully return all sessions of a specified type for a given conference'
+        print 'Successfully return all sessions by a particular speaker'
