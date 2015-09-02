@@ -8,7 +8,8 @@ from google.appengine.ext import testbed
 from conference import (
     ConferenceApi,
     CONF_GET_REQUEST,
-    SESSION_BY_TYPE_GET_REQUEST
+    SESSION_BY_TYPE_GET_REQUEST,
+    SESSION_BY_SPEAKER_GET_REQUEST
 
 )
 
@@ -83,5 +84,18 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r_sessions = r.items
         assert len(r_sessions) == 1, 'returned an invalid number of sessions'
         assert r_sessions[0].typeOfSession == 'fun', 'returned an invalid session'
+
+        print 'Successfully return all sessions of a specified type for a given conference'
+
+    def testGetSessionsBySpeaker(self):
+        self.initDatabase()
+
+        container = SESSION_BY_SPEAKER_GET_REQUEST.combined_message_class(
+            speaker='superman'
+        )
+        r = self.api.getSessionsBySpeaker(container)
+        r_sessions = r.items
+        assert len(r_sessions) == 1, 'returned an invalid number of sessions'
+        assert r_sessions[0].speaker == 'superman', 'returned an invalid session'
 
         print 'Successfully return all sessions of a specified type for a given conference'
