@@ -39,9 +39,9 @@ class BaseEndpointAPITestCase(unittest.TestCase):
     def initDatabase(self):
         """ Adds database fixtures """
         _profiles = [
-            {'id': '1', 'displayName': 'Luiz', 'mainEmail': 'test1@test.com', 'teeShirtSize': '1', 'conferenceKeysToAttend': []},
-            {'id': '2', 'displayName': 'Batman', 'mainEmail': 'test2@test.com', 'teeShirtSize': '2', 'conferenceKeysToAttend': []},
-            {'id': '3', 'displayName': 'Goku', 'mainEmail': 'test3@test.com', 'teeShirtSize': '3', 'conferenceKeysToAttend': []}
+            {'displayName': 'Luiz', 'mainEmail': 'test1@test.com', 'teeShirtSize': '1', 'conferenceKeysToAttend': []},
+            {'displayName': 'Batman', 'mainEmail': 'test2@test.com', 'teeShirtSize': '2', 'conferenceKeysToAttend': []},
+            {'displayName': 'Goku', 'mainEmail': 'test3@test.com', 'teeShirtSize': '3', 'conferenceKeysToAttend': []}
         ]
         # add profiles to database
         ndb.put_multi([Profile(**p) for p in _profiles])
@@ -52,7 +52,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         _conferences = [
             {
                 'name': 'room #1',
-                'organizerUserId': '1',  # test1@test.com
+                'organizerUserId': 'test1@test.com',
                 'topics': ['programming', 'web design', 'web performance'],
                 'city': 'London',
                 'startDate': now,
@@ -69,7 +69,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
             },
             {
                 'name': 'room #2',
-                'organizerUserId': '1',  # test1@test.com
+                'organizerUserId': 'test1@test.com',
                 'topics': ['web performance'],
                 'city': 'Baton Rouge',
                 'startDate': now + datetime.timedelta(days=10),
@@ -79,7 +79,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
             },
             {
                 'name': 'room #3',
-                'organizerUserId': '1',  # test1@test.com
+                'organizerUserId': 'test1@test.com',
                 'topics': ['programming', 'misc'],
                 'startDate': now + datetime.timedelta(days=8),
                 'endDate': now + datetime.timedelta(days=10),
@@ -88,7 +88,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
             },
             {
                 'name': 'room #4',
-                'organizerUserId': '2',  # test2@test.com
+                'organizerUserId': 'test2@test.com',
                 'topics': ['misc'],
                 'startDate': now + datetime.timedelta(days=10),
                 'endDate': now + datetime.timedelta(days=20),
@@ -120,17 +120,20 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 session['key'] = ndb.Key(Session, c_id, parent=conf.key)
                 Session(**session).put()
 
-    def login(self, email='test1@test.com', id='1', is_admin=False):
+    def login(self, email='test1@test.com', is_admin=False):
         """ Logs in user (using simulation). If no arguments are given, logs in using default user `test1@test.com` """
         self.testbed.setup_env(
             user_email=email,
-            user_id=id,
             user_is_admin='1' if is_admin else '0',
-            overwrite=True)
+            overwrite=True,
+            # support oauth login using `endpoints.get_current_user()`
+            ENDPOINTS_AUTH_EMAIL=email,
+            ENDPOINTS_AUTH_DOMAIN='testing.com'
+        )
 
     def logout(self):
         """ Logs out user (using simulation) """
-        self.login('', '')
+        self.login('')
 
     def getUserId(self):
         """ Returns current user's id """
@@ -146,3 +149,5 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         assert users.get_current_user().email() == 'test1@test.com'
         self.login(is_admin=True)
         assert users.is_current_user_admin()
+        self.logout()
+        assert not users.get_current_user()
