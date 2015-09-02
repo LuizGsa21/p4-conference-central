@@ -70,3 +70,18 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r_sessions[0].name == 'Google App Engine', 'returned an invalid session'
 
         print 'Successfully returned sessions for a given query'
+
+    def testGetConferenceSessionsByType(self):
+        self.initDatabase()
+
+        conf = Conference.query(Conference.name == 'room #4').fetch(1)[0]
+        container = SESSION_BY_TYPE_GET_REQUEST.combined_message_class(
+            typeOfSession='fun',
+            websafeConferenceKey=conf.key.urlsafe()
+        )
+        r = self.api.getConferenceSessionsByType(container)
+        r_sessions = r.items
+        assert len(r_sessions) == 1, 'returned an invalid number of sessions'
+        assert r_sessions[0].typeOfSession == 'fun', 'returned an invalid session'
+
+        print 'Successfully return all sessions of a specified type for a given conference'
