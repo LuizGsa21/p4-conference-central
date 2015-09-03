@@ -132,10 +132,22 @@ class Session(ndb.Model):
     name          = ndb.StringProperty(required=True)
     highlights    = ndb.StringProperty()
     speaker       = ndb.StringProperty(required=True)
-    duration      = ndb.IntegerProperty()
+    duration      = ndb.IntegerProperty(required=True)
     typeOfSession = ndb.StringProperty(required=True)
-    date          = ndb.DateProperty()
-    startTime     = ndb.TimeProperty()
+    date          = ndb.DateProperty(required=True)
+    startTime     = ndb.TimeProperty(required=True)
+
+    def toForm(self):
+        return SessionForm(
+            websafeKey=self.key.urlsafe(),
+            name=self.name,
+            highlights=self.highlights,
+            speaker=self.speaker,
+            duration=self.duration,
+            typeOfSession=self.typeOfSession,
+            date=self.date.strftime('%Y-%m-%d'),
+            startTime=self.startTime.strftime('%H:%M')
+        )
 
     @classmethod
     def formatInput(cls, *args, **kwargs):
