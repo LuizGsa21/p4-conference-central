@@ -249,3 +249,17 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r = self.api.updateConference(container)
         assert r.name == 'testUpdateConference', 'Returned an invalid conference'
         assert r.name == key.get().name, 'Failed to update datastore'
+
+    def testGetConference(self):
+        self.initDatabase()
+
+        self.login()
+        conf = Conference.query(ancestor=ndb.Key(Profile, self.getUserId())).get()
+
+        container = CONF_GET_REQUEST.combined_message_class(
+            websafeConferenceKey=conf.key.urlsafe(),
+        )
+
+        r = self.api.getConference(container)
+        assert r.websafeKey == conf.key.urlsafe(), 'Returned an invalid conference'
+
