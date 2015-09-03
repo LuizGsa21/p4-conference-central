@@ -26,7 +26,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         self.testbed.activate()
 
         # Create a consistency policy that will simulate the High Replication consistency model.
-        self.policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(probability=0)
+        self.policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(probability=1)
         # Initialize the datastore stub with this policy.
         self.testbed.init_datastore_v3_stub(consistency_policy=self.policy)
         # declare other service stubs

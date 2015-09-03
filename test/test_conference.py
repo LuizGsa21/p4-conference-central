@@ -11,7 +11,8 @@ from conference import (
     CONF_GET_REQUEST,
     SESSION_POST_REQUEST,
     SESSION_BY_TYPE_GET_REQUEST,
-    SESSION_BY_SPEAKER_GET_REQUEST
+    SESSION_BY_SPEAKER_GET_REQUEST,
+    SESSION_WISHLIST_POST_REQUEST
 
 )
 
@@ -146,3 +147,17 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r = self.api.createSession(container)
         count = conf.sessions.count()
         assert count == initialCount + 1, 'Failed to add session to conference'
+
+    def testAddSessionToWishlist(self):
+        """ TEST: Add session to the user's wishlist """
+        self.initDatabase()
+
+        session = Session.query(Session.name == 'Intro to Poker').get()
+        swsk = session.key.urlsafe()
+        container = SESSION_WISHLIST_POST_REQUEST.combined_message_class(
+            sessionKey=swsk
+        )
+        self.login()  # login as default user
+        r = self.api.addSessionToWishlist(container)
+        profile = ndb.Key(Profile, self.getUserId()).get()
+        assert r.data and swsk in profile.sessionKeysInWishList, "Failed to session to user's wish list"

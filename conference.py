@@ -679,7 +679,7 @@ class ConferenceApi(remote.Service):
                       http_method='POST', name='addSessionToWishlist')
     @ndb.transactional(xg=True)
     def addSessionToWishlist(self, request):
-
+        """  Add session to the user's wishlist """
         # get user Profile
         prof = self._getProfileFromUser()
         # get session and check if it exists
