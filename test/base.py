@@ -143,7 +143,8 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         return getUserId(user)
 
     def testLogin(self):
-        """ Ensures login simulation is working properly """
+        """TEST: User login simulation"""
+
         assert not users.get_current_user()
         self.login()
         assert users.get_current_user().email() == 'test1@test.com'

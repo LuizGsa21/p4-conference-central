@@ -45,6 +45,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         super(ConferenceTestCase, self).tearDown()
 
     def testGetConferenceSessions(self):
+        """TEST: Return all sessions for a given conference"""
         self.initDatabase()
 
         conf = Conference.query(Conference.name == 'room #1').fetch(1)[0]
@@ -59,9 +60,8 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         for r_session in r_sessions:
             assert sessions[r_session.websafeKey], 'returned an invalid session websafeKey'
 
-        print 'Successfully returned all sessions for a given conference'
-
     def testQuerySession(self):
+        """TEST: Return sessions for a given query"""
         self.initDatabase()
         form = SessionQueryForms()
         form.filters = [
@@ -72,9 +72,8 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert len(r_sessions) == 1, 'returned an invalid number of sessions'
         assert r_sessions[0].name == 'Google App Engine', 'returned an invalid session'
 
-        print 'Successfully returned sessions for a given query'
-
     def testGetConferenceSessionsByType(self):
+        """TEST: Return all sessions of a specified type for a given conference"""
         self.initDatabase()
 
         conf = Conference.query(Conference.name == 'room #4').fetch(1)[0]
@@ -87,9 +86,8 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert len(r_sessions) == 1, 'returned an invalid number of sessions'
         assert r_sessions[0].typeOfSession == 'fun', 'returned an invalid session'
 
-        print 'Successfully return all sessions of a specified type for a given conference'
-
     def testGetSessionsBySpeaker(self):
+        """TEST: Return all sessions by a particular speaker"""
         self.initDatabase()
 
         container = SESSION_BY_SPEAKER_GET_REQUEST.combined_message_class(
@@ -100,9 +98,8 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert len(r_sessions) == 1, 'returned an invalid number of sessions'
         assert r_sessions[0].speaker == 'superman', 'returned an invalid session'
 
-        print 'Successfully return all sessions by a particular speaker'
-
     def testCreateSession(self):
+        """TEST: Create a session open to the organizer of the conference"""
         self.initDatabase()
         conf = Conference.query(Conference.name == 'room #1').fetch(1)[0]
 
@@ -149,4 +146,3 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r = self.api.createSession(container)
         count = conf.sessions.count()
         assert count == initialCount + 1, 'Failed to add session to conference'
-        print 'Successfully created a session open to the organizer of the conference'
