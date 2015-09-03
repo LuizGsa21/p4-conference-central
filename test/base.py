@@ -5,6 +5,7 @@ from google.appengine.api import users
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.ext import testbed
+from google.appengine.datastore import datastore_stub_util
 
 from models import (
     Profile,
@@ -19,12 +20,16 @@ class BaseEndpointAPITestCase(unittest.TestCase):
     """ Base endpoint API unit tests. """
 
     def setUp(self):
-        # First, create an instance of the Testbed class.
+        # create an instance of the Testbed class.
         self.testbed = testbed.Testbed()
         # Then activate the testbed, which prepares the service stubs for use.
         self.testbed.activate()
-        # Next, declare which service stubs you want to use.
-        self.testbed.init_datastore_v3_stub()
+
+        # Create a consistency policy that will simulate the High Replication consistency model.
+        self.policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(probability=0)
+        # Initialize the datastore stub with this policy.
+        self.testbed.init_datastore_v3_stub(consistency_policy=self.policy)
+        # declare other service stubs
         self.testbed.init_memcache_stub()
         self.testbed.init_user_stub()
         # Clear ndb's in-context cache between tests.
