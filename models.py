@@ -67,18 +67,6 @@ class Conference(ndb.Model):
     def sessions(self):
         return Session.query(ancestor=self.key)
 
-    @classmethod
-    def formatInput(cls, *args, **kwargs):
-        for key in ('startDate', 'endDate'):
-            value = kwargs.get(key, None)
-            if isinstance(value, datetime.datetime):
-                # format datetime to only account for year, month, and day
-                kwargs[key] = value.replace(hour=0, minute=0, second=0, microsecond=0)
-            elif isinstance(value, basestring):
-                # turn string into a datatime object. only account for year, month, day
-                kwargs[key] = datetime.datetime.strptime(value, "%Y-%m-%d").date()
-        return cls(*args, **kwargs)
-
 
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
@@ -148,26 +136,6 @@ class Session(ndb.Model):
             date=self.date.strftime('%Y-%m-%d'),
             startTime=self.startTime.strftime('%H:%M')
         )
-
-    @classmethod
-    def formatInput(cls, *args, **kwargs):
-        date = kwargs.get('date', None)
-        if isinstance(date, datetime.datetime):
-            # format datetime to only account for year, month, and day
-            kwargs['date'] = date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif isinstance(date, basestring):
-            # turn string into a datatime object. only account for year, month, day
-            kwargs['date'] = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-
-        startTime = kwargs.get('startTime', None)
-        if isinstance(startTime, datetime.time):
-            # format startTime to only account for hours and minutes
-            kwargs['startTime'] = startTime.replace(second=0, microsecond=0).time()
-        elif isinstance(startTime, basestring):
-            # turn string into a time object. only account for hours and minutes
-            kwargs['startTime'] = datetime.datetime.strptime(startTime, "%H:%M").time()
-
-        return cls(*args, **kwargs)
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
