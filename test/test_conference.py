@@ -1,6 +1,7 @@
 import datetime
 from endpoints import UnauthorizedException, ForbiddenException, get_current_user
 from base import BaseEndpointAPITestCase
+from utils import formToDict
 from google.appengine.api import users
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
@@ -13,7 +14,8 @@ from conference import (
     SESSION_POST_REQUEST,
     SESSION_BY_TYPE_GET_REQUEST,
     SESSION_BY_SPEAKER_GET_REQUEST,
-    SESSION_WISHLIST_POST_REQUEST
+    SESSION_WISHLIST_POST_REQUEST,
+    CONF_POST_REQUEST
 
 )
 
@@ -202,6 +204,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
     def testCreateConference(self):
         """ TEST: Create new conference."""
+        self.initDatabase()
         try:
             # only logged in users may create conferences
             self.api.createConference(ConferenceForm())
@@ -226,3 +229,23 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
             'Failed to add conference to datastore'
         assert r.name == 'New Conference', 'Returned an invalid conference'
 
+    def testUpdateConference(self):
+        self.initDatabase()
+
+        self.login()
+        conf = Conference.query(ancestor=ndb.Key(Profile, self.getUserId())).get()
+        key = conf.key
+        assert conf.name != 'testUpdateConference', "This shouldn't fail. Maybe someone messed with database fixture"
+
+        # converting `conf` to a dictionary doesn't format the values properly to send request.
+        # so first convert it to a form, then to a dictionary
+        data = formToDict(conf.toForm())
+        data['name'] = 'testUpdateConference'
+        container = CONF_POST_REQUEST.combined_message_class(
+            websafeConferenceKey=conf.key.urlsafe(),
+            **data
+        )
+
+        r = self.api.updateConference(container)
+        assert r.name == 'testUpdateConference', 'Returned an invalid conference'
+        assert r.name == key.get().name, 'Failed to update datastore'
