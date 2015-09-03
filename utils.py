@@ -43,3 +43,7 @@ def getUserId(user, id_type="email"):
             return profile.id()
         else:
             return str(uuid.uuid1().get_hex())
+
+def formToDict(form):
+    """ Returns a dictionary from the given form/ProtoRPC Message """
+    return {field.name: getattr(form, field.name) for field in form.all_fields()}
