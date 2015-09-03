@@ -699,6 +699,7 @@ class ConferenceApi(remote.Service):
     @endpoints.method(SESSION_WISHLIST_POST_REQUEST, BooleanMessage,
                       path='profile/wishlist/{sessionKey}',
                       http_method='DELETE', name='removeSessionFromWishlist')
+    @ndb.transactional(xg=True)
     def removeSessionFromWishlist(self, request):
         # get user Profile
         prof = self._getProfileFromUser()
