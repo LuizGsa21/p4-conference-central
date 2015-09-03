@@ -1,3 +1,4 @@
+import datetime
 from endpoints import UnauthorizedException, ForbiddenException, get_current_user
 from base import BaseEndpointAPITestCase
 from google.appengine.api import users
@@ -188,11 +189,40 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
     def testGetProfile(self):
         """ TEST: Get user's profile  """
         try:
+            # only logged in users have a profile
             self.api.getProfile(message_types.VoidMessage())
             assert False, 'UnauthorizedException should of been thrown'
         except UnauthorizedException:
             pass
 
+        # login and retrieve the profile
         self.login()
         r = self.api.getProfile(message_types.VoidMessage())
-        assert r.mainEmail == 'test1@test.com', 'Return an invalid user profile'
+        assert r.mainEmail == 'test1@test.com', 'Returned an invalid user profile'
+
+    def testCreateConference(self):
+        """ TEST: Create new conference."""
+        try:
+            # only logged in users may create conferences
+            self.api.createConference(ConferenceForm())
+            assert False, 'UnauthorizedException should of been thrown'
+        except UnauthorizedException:
+            pass
+
+        # login and create a conference
+        self.login()
+
+        now = datetime.datetime.now()
+        r = self.api.createConference(ConferenceForm(
+            name='New Conference',
+            organizerUserId=self.getUserId(),
+            topics=['misc'],
+            city='Baton Rouge',
+            startDate=str(now),
+            endDate=str(now + datetime.timedelta(days=5)),
+            maxAttendees=100
+        ))
+        assert Conference.query(Conference.name == 'New Conference').count() == 1, \
+            'Failed to add conference to datastore'
+        assert r.name == 'New Conference', 'Returned an invalid conference'
+
