@@ -49,7 +49,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
             {'displayName': 'Goku', 'mainEmail': 'test3@test.com', 'teeShirtSize': '3', 'conferenceKeysToAttend': []}
         ]
         # add profiles to database
-        ndb.put_multi([Profile(**p) for p in _profiles])
+        ndb.put_multi([Profile(key=ndb.Key(Profile, p['mainEmail']),**p) for p in _profiles])
 
         now = datetime.datetime.now()
         # 3 conferences with `test1@test.com`

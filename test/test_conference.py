@@ -4,7 +4,7 @@ from google.appengine.api import users
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.ext import testbed
-
+from protorpc import message_types
 
 from conference import (
     ConferenceApi,
@@ -161,3 +161,27 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r = self.api.addSessionToWishlist(container)
         profile = ndb.Key(Profile, self.getUserId()).get()
         assert r.data and swsk in profile.sessionKeysInWishList, "Failed to session to user's wish list"
+
+    def testGetSessionsInWishlist(self):
+        """ TEST: Get sessions in user's wish list """
+        self.initDatabase()
+
+        self.login()  # login as default user
+        profile = ndb.Key(Profile, self.getUserId()).get()
+        pSessionKeys = profile.sessionKeysInWishList
+
+        assert len(pSessionKeys) == 0, "This shouldn't fail. Maybe someone messed with database fixture"
+
+        r = self.api.getSessionsInWishlist(message_types.VoidMessage())
+        assert len(r.items) == 0, "Returned an invalid number of sessions"
+
+        # add a session to user's wish list
+        websafeKey = Session.query().get().key.urlsafe()
+        pSessionKeys.append(websafeKey)
+        profile.put()
+
+        # check that user's wishlist was updated
+        r = self.api.getSessionsInWishlist(message_types.VoidMessage())
+        assert len(r.items) == 1, "Returned an invalid number of sessions"
+        assert r.items[0].websafeKey == websafeKey, "Returned an invalid session"
+
