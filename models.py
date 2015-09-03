@@ -67,6 +67,22 @@ class Conference(ndb.Model):
     def sessions(self):
         return Session.query(ancestor=self.key)
 
+    def toForm(self, display_name=''):
+        return ConferenceForm(
+            websafeKey=self.key.urlsafe(),
+            name=self.name,
+            description=self.description,
+            organizerUserId=self.organizerUserId,
+            topics=self.topics,
+            city=self.city,
+            startDate=self.startDate.strftime('%Y-%m-%d'),
+            month=self.month,
+            endDate=self.endDate.strftime('%Y-%m-%d'),
+            maxAttendees=self.maxAttendees,
+            seatsAvailable=self.seatsAvailable,
+            organizerDisplayName=display_name
+        )
+
 
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
