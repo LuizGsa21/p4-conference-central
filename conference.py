@@ -569,21 +569,6 @@ class ConferenceApi(remote.Service):
         return self._conferenceRegistration(request, reg=False)
 
         # - - - Conference Session - - - - - - - - - - - - - - - - - - - -
-    def _copySessionToForm(self, session):
-        """Copy relevant fields from Session to SessionForm."""
-        form = SessionForm()
-        for field in form.all_fields():
-            if hasattr(session, field.name):
-                # convert Date or Time properties to string; just copy others
-                if field.name in ('date', 'startTime'):
-                    setattr(form, field.name, str(getattr(session, field.name)))
-                else:
-                    setattr(form, field.name, getattr(session, field.name))
-            elif field.name == "websafeKey":
-                setattr(form, field.name, session.key.urlsafe())
-        form.check_initialized()
-        return form
-
     @endpoints.method(CONF_GET_REQUEST, SessionForms,
                       path='conference/{websafeConferenceKey}/sessions',
                       http_method='GET', name='getConferenceSessions')
@@ -596,7 +581,7 @@ class ConferenceApi(remote.Service):
 
         # Return a set of SessionForm objects per session
         return SessionForms(
-            items=[self._copySessionToForm(session) for session in conf.sessions]
+            items=[session.toForm() for session in conf.sessions]
         )
 
     @endpoints.method(SESSION_BY_TYPE_GET_REQUEST, SessionForms,
@@ -614,7 +599,7 @@ class ConferenceApi(remote.Service):
 
         # Return a set of SessionForm objects per session
         return SessionForms(
-            items=[self._copySessionToForm(session) for session in sessions]
+            items=[session.toForm() for session in sessions]
         )
 
     @endpoints.method(SESSION_BY_SPEAKER_GET_REQUEST, SessionForms,
@@ -627,7 +612,7 @@ class ConferenceApi(remote.Service):
 
         # Return a set of SessionForm objects per session
         return SessionForms(
-            items=[self._copySessionToForm(session) for session in sessions]
+            items=[session.toForm() for session in sessions]
         )
 
     def _createSessionObject(self, request):
@@ -648,20 +633,21 @@ class ConferenceApi(remote.Service):
 
         # copy SessionForm/ProtoRPC Message into dict
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
-
-        if not data['speaker']:
-            raise endpoints.BadRequestException("A speaker is required to create a session.")
+        # check required fields
+        for key in ('speaker', 'startTime', 'name', 'duration', 'date', 'startTime'):
+            if not data[key]:
+                raise endpoints.BadRequestException("'%s' field is required to create a session." % key)
 
         # convert date string to a datetime object.
         try:
             data['date'] = datetime.strptime(data['date'][:10], "%Y-%m-%d").date()
-        except ValueError:
+        except (TypeError, ValueError):
             raise endpoints.BadRequestException("Invalid date format. Please use 'YYYY-MM-DD'")
 
         # convert date string to a time object. HH:MM
         try:
             data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
-        except ValueError:
+        except (TypeError, ValueError):
             raise endpoints.BadRequestException("Invalid date format. Please use 'HH:MM'")
 
         if data['duration'] <= 0:
@@ -678,7 +664,7 @@ class ConferenceApi(remote.Service):
         session = Session(**data)
         session.put()
 
-        return self._copySessionToForm(session)
+        return session.toForm()
 
     @endpoints.method(SESSION_POST_REQUEST, SessionForm,
                       path='conference/sessions/{websafeConferenceKey}',
@@ -739,8 +725,7 @@ class ConferenceApi(remote.Service):
         # get all sessions in users wishlist
         sessions = ndb.get_multi([ndb.Key(urlsafe=wssk) for wssk in prof.sessionKeysInWishList])
         # return a set of `SessionForm` objects
-        logging.info(sessions)
-        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+        return SessionForms(items=[session.toForm() for session in sessions])
 
     def _querySessions(self, filters):
         q = Session.query()
@@ -775,7 +760,7 @@ class ConferenceApi(remote.Service):
     def querySessions(self, request):
         """ Query for sessions. Uses `SESSION_FIELDS` and `OPERATORS` to construct query. """
         sessions = self._querySessions(request.filters)
-        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+        return SessionForms(items=[session.toForm() for session in sessions])
 
 
 
