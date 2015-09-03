@@ -46,7 +46,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         super(ConferenceTestCase, self).tearDown()
 
     def testGetConferenceSessions(self):
-        """TEST: Return all sessions for a given conference"""
+        """ TEST: Return all sessions for a given conference"""
         self.initDatabase()
 
         conf = Conference.query(Conference.name == 'room #1').fetch(1)[0]
@@ -62,7 +62,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
             assert sessions[r_session.websafeKey], 'returned an invalid session websafeKey'
 
     def testQuerySession(self):
-        """TEST: Return sessions for a given query"""
+        """ TEST: Return sessions for a given query"""
         self.initDatabase()
         form = SessionQueryForms()
         form.filters = [
@@ -74,7 +74,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r_sessions[0].name == 'Google App Engine', 'returned an invalid session'
 
     def testGetConferenceSessionsByType(self):
-        """TEST: Return all sessions of a specified type for a given conference"""
+        """ TEST: Return all sessions of a specified type for a given conference"""
         self.initDatabase()
 
         conf = Conference.query(Conference.name == 'room #4').fetch(1)[0]
@@ -88,7 +88,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r_sessions[0].typeOfSession == 'fun', 'returned an invalid session'
 
     def testGetSessionsBySpeaker(self):
-        """TEST: Return all sessions by a particular speaker"""
+        """ TEST: Return all sessions by a particular speaker"""
         self.initDatabase()
 
         container = SESSION_BY_SPEAKER_GET_REQUEST.combined_message_class(
@@ -100,7 +100,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r_sessions[0].speaker == 'superman', 'returned an invalid session'
 
     def testCreateSession(self):
-        """TEST: Create a session open to the organizer of the conference"""
+        """ TEST: Create a session open to the organizer of the conference"""
         self.initDatabase()
         conf = Conference.query(Conference.name == 'room #1').fetch(1)[0]
 
@@ -185,3 +185,14 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert len(r.items) == 1, "Returned an invalid number of sessions"
         assert r.items[0].websafeKey == websafeKey, "Returned an invalid session"
 
+    def testGetProfile(self):
+        """ TEST: Get user's profile  """
+        try:
+            self.api.getProfile(message_types.VoidMessage())
+            assert False, 'UnauthorizedException should of been thrown'
+        except UnauthorizedException:
+            pass
+
+        self.login()
+        r = self.api.getProfile(message_types.VoidMessage())
+        assert r.mainEmail == 'test1@test.com', 'Return an invalid user profile'
