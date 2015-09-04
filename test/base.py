@@ -34,7 +34,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
             # Set require_indexes to false to automatically add indexes to index.yaml
             # NOTE: root_path must also be set
             require_indexes=False,
-            root_path=_parentDir,
+            root_path=_parentDir
         )
         # declare other service stubs
         self.testbed.init_memcache_stub()
