@@ -76,6 +76,26 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert len(r_sessions) == 1, 'returned an invalid number of sessions'
         assert r_sessions[0].name == 'Google App Engine', 'returned an invalid session'
 
+    def testQueryConferences(self):
+        self.initDatabase()
+        form = ConferenceQueryForms()
+        # verify fixture contains conference
+        assert Conference.query(Conference.city == 'London').count() == 1, \
+            "This shouldn't fail. Maybe someone messed with database fixture"
+
+        form.filters = [
+            ConferenceQueryForm(field='CITY', operator='EQ', value='London')
+        ]
+        r = self.api.queryConferences(form)
+        conferences = r.items
+        assert len(conferences) == 1, 'Returned an invalid number of conferences'
+        assert conferences[0].city == 'London', 'Returned an invalid conference'
+
+        # check that all conferences are returned when no filter is given
+        form.filters = []
+        r = self.api.queryConferences(form)
+        assert len(r.items) == Conference.query().count(), 'Returned an invalid number of conferences'
+
     def testGetConferenceSessionsByType(self):
         """ TEST: Return all sessions of a specified type for a given conference"""
         self.initDatabase()
