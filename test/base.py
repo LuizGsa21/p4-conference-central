@@ -1,5 +1,6 @@
 import unittest
 import datetime
+import os
 
 from google.appengine.api import users
 from google.appengine.api import memcache
@@ -27,8 +28,13 @@ class BaseEndpointAPITestCase(unittest.TestCase):
 
         # Create a consistency policy that will simulate the High Replication consistency model.
         self.policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(probability=1)
-        # Initialize the datastore stub with this policy.
-        self.testbed.init_datastore_v3_stub(consistency_policy=self.policy)
+        self.testbed.init_datastore_v3_stub(
+            consistency_policy=self.policy,
+            # Set require_indexes to false to automatically add indexes to index.yaml
+            # NOTE: root_path must also be set
+            require_indexes=False,
+            root_path=os.path.pardir,
+        )
         # declare other service stubs
         self.testbed.init_memcache_stub()
         self.testbed.init_user_stub()
