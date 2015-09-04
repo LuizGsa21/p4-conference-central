@@ -266,7 +266,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r.websafeKey == conf.key.urlsafe(), 'Returned an invalid conference'
 
     def testGetConferencesCreated(self):
-        """ TEST: Return conferences created by user."""
+        """ TEST: Return conferences created by user """
         self.initDatabase()
 
         self.login()
@@ -280,4 +280,24 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         keys = [c.key.urlsafe() for c in conferences]
         for conf in r.items:
             assert conf.websafeKey in keys, 'Returned an invalid conference key (websafe)'
+
+    def testGetConferencesToAttend(self):
+        """ TEST: Get list of conferences that user has registered for """
+        self.initDatabase()
+
+        self.login()
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        count = len(prof.conferenceKeysToAttend)
+        assert count == 0, "This shouldn't fail. Maybe someone messed with database fixture"
+
+        r = self.api.getConferencesToAttend(message_types.VoidMessage())
+        assert len(r.items) == count, 'Returned and invalid number of conferences'
+
+        # register to a conference and test again
+        wsk = Conference.query().get().key.urlsafe()
+        prof.conferenceKeysToAttend.append(wsk)
+        prof.put()
+
+        r = self.api.getConferencesToAttend(message_types.VoidMessage())
+        assert len(r.items) == count + 1, 'Returned and invalid number of conferences'
 
