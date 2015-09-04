@@ -185,7 +185,32 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         self.login()  # login as default user
         r = self.api.addSessionToWishlist(container)
         profile = ndb.Key(Profile, self.getUserId()).get()
-        assert r.data and swsk in profile.sessionKeysInWishList, "Failed to session to user's wish list"
+        assert r.data and swsk in profile.sessionKeysInWishList, "Failed to add session to user's wish list"
+
+    def testRemoveSessionFromWishlist(self):
+        """ TEST: Remove session from user's wishlist """
+        self.initDatabase()
+
+        self.login()  # login as default user
+        # verify database fixture
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        session = Session.query(Session.name == 'Intro to Poker').get()
+        assert session and len(prof.sessionKeysInWishList) == 0,\
+            "This shouldn't fail. Maybe someone messed with database fixture"
+        # manually add a session to user's wishlist
+        swsk = session.key.urlsafe()
+        prof.sessionKeysInWishList.append(swsk)
+        prof.put()
+
+        # build request
+        container = SESSION_WISHLIST_POST_REQUEST.combined_message_class(
+            websafeSessionKey=swsk
+        )
+        # remove session from users wishlist
+        r = self.api.removeSessionFromWishlist(container)
+        # re-fetch profile then verify session was removed
+        prof = prof.key.get()
+        assert r.data and swsk not in prof.sessionKeysInWishList, "Failed to remove session from user's wish list"
 
     def testGetSessionsInWishlist(self):
         """ TEST: Get sessions in user's wish list """
