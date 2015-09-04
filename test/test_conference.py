@@ -230,6 +230,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r.name == 'New Conference', 'Returned an invalid conference'
 
     def testUpdateConference(self):
+        """ TEST: Update conference w/provided fields & return w/updated info """
         self.initDatabase()
 
         self.login()
@@ -251,6 +252,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r.name == key.get().name, 'Failed to update datastore'
 
     def testGetConference(self):
+        """ TEST: Return requested conference (by websafeConferenceKey) """
         self.initDatabase()
 
         self.login()
@@ -262,4 +264,20 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
         r = self.api.getConference(container)
         assert r.websafeKey == conf.key.urlsafe(), 'Returned an invalid conference'
+
+    def testGetConferencesCreated(self):
+        """ TEST: Return conferences created by user."""
+        self.initDatabase()
+
+        self.login()
+        conferences = Conference.query(ancestor=ndb.Key(Profile, self.getUserId())).fetch()
+        assert len(conferences) == 3, "This shouldn't fail. Maybe someone messed with database fixture"
+
+        r = self.api.getConferencesCreated(message_types.VoidMessage())
+
+        assert len(r.items) == len(conferences), 'Returned an invalid number of conferences'
+        # verify that every key matches the returned set
+        keys = [c.key.urlsafe() for c in conferences]
+        for conf in r.items:
+            assert conf.websafeKey in keys, 'Returned an invalid conference key (websafe)'
 
