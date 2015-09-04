@@ -50,6 +50,17 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
     def tearDown(self):
         super(ConferenceTestCase, self).tearDown()
 
+    def testLogin(self):
+        """TEST: User login simulation"""
+
+        assert not users.get_current_user()
+        self.login()
+        assert users.get_current_user().email() == 'test1@test.com'
+        self.login(is_admin=True)
+        assert users.is_current_user_admin()
+        self.logout()
+        assert not users.get_current_user()
+
     def testGetConferenceSessions(self):
         """ TEST: Return all sessions for a given conference"""
         self.initDatabase()

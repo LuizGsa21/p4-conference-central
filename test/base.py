@@ -152,14 +152,3 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         if not user:
             raise ValueError("User must be logged in to retrieve user id")
         return getUserId(user)
-
-    def testLogin(self):
-        """TEST: User login simulation"""
-
-        assert not users.get_current_user()
-        self.login()
-        assert users.get_current_user().email() == 'test1@test.com'
-        self.login(is_admin=True)
-        assert users.is_current_user_admin()
-        self.logout()
-        assert not users.get_current_user()
