@@ -35,8 +35,10 @@ from models import (
     SessionForm,
     SessionForms,
     SessionQueryForm,
-    SessionQueryForms
+    SessionQueryForms,
+    ConflictException
 )
+
 
 class ConferenceTestCase(BaseEndpointAPITestCase):
     """ Endpoint API unit tests. """
@@ -321,3 +323,55 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r = self.api.getConferencesToAttend(message_types.VoidMessage())
         assert len(r.items) == count + 1, 'Returned and invalid number of conferences'
 
+    def testRegisterForConference(self):
+        """ TEST: Register user for selected conference."""
+        self.initDatabase()
+
+        # verify database fixture
+        self.login()
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        conf = Conference.query(Conference.name == 'room #2').get()
+        assert conf and conf.seatsAvailable == 1 and len(prof.conferenceKeysToAttend) == 0, \
+            "This shouldn't fail. Maybe someone messed with database fixture"
+
+        container = CONF_GET_REQUEST.combined_message_class(
+            websafeConferenceKey=conf.key.urlsafe(),
+        )
+
+        # register to conference
+        r = self.api.registerForConference(container)
+
+        # re-fetch profile and conference, then check if user was properly registered
+        prof = prof.key.get()
+        conf = conf.key.get()
+        assert r.data, 'Returned an invalid response'
+        assert len(prof.conferenceKeysToAttend) == 1, "Failed to add conference to user's conferenceKeysToAttend"
+        assert conf.seatsAvailable == 0, 'Failed to decrement available seats'
+
+        # Verify users cant re-register to conferences that are already in user's conferenceKeysToAttend.
+        container = CONF_GET_REQUEST.combined_message_class(
+            websafeConferenceKey=conf.key.urlsafe(),
+        )
+        try:
+            r = self.api.registerForConference(container)
+            assert False, 'ConflictException should of been thrown...'
+        except ConflictException:
+            pass
+        # re-fetch profile and check that the user wasn't re-registered
+        prof = prof.key.get()
+        assert len(prof.conferenceKeysToAttend) == 1, "User's can't registered to the same conference"
+
+        # Login as a different user and attempt to register a conference with zero seats available
+        self.login(email='test2@test.com')
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        assert len(prof.conferenceKeysToAttend) == 0, "This shouldn't fail. Maybe someone messed with database fixture"
+        try:
+            r = self.api.registerForConference(container)
+            assert False, 'ConflictException should of been thrown...'
+        except ConflictException:
+            pass
+        # re-fetch profile and conference
+        prof = prof.key.get()
+        conf = conf.key.get()
+        assert len(prof.conferenceKeysToAttend) == 0, "User's can't register to a conference with zero seats available."
+        assert conf.seatsAvailable == 0, "seatsAvailable shouldn't have changed since user never registered..."
