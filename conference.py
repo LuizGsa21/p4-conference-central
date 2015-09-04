@@ -120,7 +120,7 @@ SESSION_BY_SPEAKER_GET_REQUEST = endpoints.ResourceContainer(
 
 SESSION_WISHLIST_POST_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
-    sessionKey=messages.StringField(1, required=True)
+    websafeSessionKey=messages.StringField(1, required=True)
 )
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -675,7 +675,7 @@ class ConferenceApi(remote.Service):
 
 
     @endpoints.method(SESSION_WISHLIST_POST_REQUEST, BooleanMessage,
-                      path='profile/wishlist/{sessionKey}',
+                      path='profile/wishlist/{websafeSessionKey}',
                       http_method='POST', name='addSessionToWishlist')
     @ndb.transactional(xg=True)
     def addSessionToWishlist(self, request):
@@ -683,7 +683,7 @@ class ConferenceApi(remote.Service):
         # get user Profile
         prof = self._getProfileFromUser()
         # get session and check if it exists
-        wssk = request.sessionKey
+        wssk = request.websafeSessionKey
         session = ndb.Key(urlsafe=wssk).get()
 
         if not session:
@@ -697,14 +697,14 @@ class ConferenceApi(remote.Service):
         return BooleanMessage(data=True)
 
     @endpoints.method(SESSION_WISHLIST_POST_REQUEST, BooleanMessage,
-                      path='profile/wishlist/{sessionKey}',
+                      path='profile/wishlist/{websafeSessionKey}',
                       http_method='DELETE', name='removeSessionFromWishlist')
     @ndb.transactional(xg=True)
     def removeSessionFromWishlist(self, request):
         # get user Profile
         prof = self._getProfileFromUser()
         # get session and check if it exists
-        wssk = request.sessionKey
+        wssk = request.websafeSessionKey
         session = ndb.Key(urlsafe=wssk).get()
         if not session:
             raise endpoints.BadRequestException("Session with key %s doesn't exist" % wssk)
