@@ -68,7 +68,7 @@ class Conference(ndb.Model):
         return Session.query(ancestor=self.key)
 
     def toForm(self, display_name=''):
-        return ConferenceForm(
+        form = ConferenceForm(
             websafeKey=self.key.urlsafe(),
             name=self.name,
             description=self.description,
@@ -82,6 +82,8 @@ class Conference(ndb.Model):
             seatsAvailable=self.seatsAvailable,
             organizerDisplayName=display_name
         )
+        form.check_initialized()
+        return form
 
 
 class ConferenceForm(messages.Message):
@@ -142,7 +144,7 @@ class Session(ndb.Model):
     startTime     = ndb.TimeProperty(required=True)
 
     def toForm(self):
-        return SessionForm(
+        form = SessionForm(
             websafeKey=self.key.urlsafe(),
             name=self.name,
             highlights=self.highlights,
@@ -152,6 +154,9 @@ class Session(ndb.Model):
             date=self.date.strftime('%Y-%m-%d'),
             startTime=self.startTime.strftime('%H:%M')
         )
+        form.check_initialized()
+        return form
+
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
