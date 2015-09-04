@@ -30,6 +30,24 @@ class Profile(ndb.Model):
     conferenceKeysToAttend = ndb.StringProperty(repeated=True)
     sessionKeysInWishList = ndb.StringProperty(repeated=True)
 
+    def toForm(self):
+        form = ProfileForm(
+            displayName=self.displayName,
+            mainEmail=self.mainEmail,
+            teeShirtSize=getattr(TeeShirtSize, self.teeShirtSize),
+            conferenceKeysToAttend=self.conferenceKeysToAttend
+        )
+        form.check_initialized()
+        return form
+
+    def toMiniForm(self):
+        form = ProfileMiniForm(
+            displayName=self.displayName,
+            teeShirtSize=getattr(TeeShirtSize, self.teeShirtSize)
+        )
+        form.check_initialized()
+        return form
+
 class ProfileMiniForm(messages.Message):
     """ProfileMiniForm -- update Profile form message"""
     displayName = messages.StringField(1)
