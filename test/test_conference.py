@@ -377,6 +377,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert conf.seatsAvailable == 0, "seatsAvailable shouldn't have changed since user never registered..."
 
     def testUnregisterFromConference(self):
+        """ TEST: Unregister user for selected conference."""
         self.initDatabase()
 
         # verify database fixture
@@ -402,4 +403,27 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert r.data, 'Returned an invalid response'
         assert len(prof.conferenceKeysToAttend) == 0, "Failed to remove conference from user's conferenceKeysToAttend"
         assert conf.seatsAvailable == 2, 'Failed to increment available seats'
+
+    def testSaveProfile(self):
+        self.initDatabase()
+        self.login()
+
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        assert TeeShirtSize(prof.teeShirtSize) == TeeShirtSize.NOT_SPECIFIED, \
+            "This shouldn't fail. Maybe someone messed with database fixture"
+
+        form = ProfileMiniForm(
+            displayName='testSaveProfile',
+            teeShirtSize=TeeShirtSize.XL_M
+        )
+        r = self.api.saveProfile(form)
+
+        # validate response
+        assert r.displayName == 'testSaveProfile' and \
+               TeeShirtSize(r.teeShirtSize) == TeeShirtSize.XL_M, 'Returned invalid response'
+
+        # re-fetch profile and validate values in datastore
+        prof = prof.key.get()
+        assert prof.displayName == 'testSaveProfile' and \
+               TeeShirtSize(prof.teeShirtSize) == TeeShirtSize.XL_M, 'Failed to save profile in datastore'
 
