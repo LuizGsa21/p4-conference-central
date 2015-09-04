@@ -375,3 +375,31 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         conf = conf.key.get()
         assert len(prof.conferenceKeysToAttend) == 0, "User's can't register to a conference with zero seats available."
         assert conf.seatsAvailable == 0, "seatsAvailable shouldn't have changed since user never registered..."
+
+    def testUnregisterFromConference(self):
+        self.initDatabase()
+
+        # verify database fixture
+        self.login()
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        conf = Conference.query(Conference.name == 'room #2').get()
+        assert conf and conf.seatsAvailable == 1 and len(prof.conferenceKeysToAttend) == 0, \
+            "This shouldn't fail. Maybe someone messed with database fixture"
+
+        prof.conferenceKeysToAttend.append(conf.key.urlsafe())
+        prof.put()
+
+        container = CONF_GET_REQUEST.combined_message_class(
+            websafeConferenceKey=conf.key.urlsafe(),
+        )
+
+        # unregister conference
+        r = self.api.unregisterFromConference(container)
+
+        # re-fetch profile and conference, then check if user was properly registered
+        prof = prof.key.get()
+        conf = conf.key.get()
+        assert r.data, 'Returned an invalid response'
+        assert len(prof.conferenceKeysToAttend) == 0, "Failed to remove conference from user's conferenceKeysToAttend"
+        assert conf.seatsAvailable == 2, 'Failed to increment available seats'
+
