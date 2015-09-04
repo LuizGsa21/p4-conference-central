@@ -15,6 +15,7 @@ from conference import (
     SESSION_BY_TYPE_GET_REQUEST,
     SESSION_BY_SPEAKER_GET_REQUEST,
     SESSION_WISHLIST_POST_REQUEST,
+    MEMCACHE_ANNOUNCEMENTS_KEY,
     CONF_POST_REQUEST
 
 )
@@ -38,6 +39,8 @@ from models import (
     SessionQueryForms,
     ConflictException
 )
+import main
+import webapp2
 
 
 class ConferenceTestCase(BaseEndpointAPITestCase):
@@ -462,4 +465,30 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         prof = prof.key.get()
         assert prof.displayName == 'testSaveProfile' and \
                TeeShirtSize(prof.teeShirtSize) == TeeShirtSize.XL_M, 'Failed to save profile in datastore'
+
+    def testGetAnnouncement(self):
+        """ TEST: Return Announcement from memcache."""
+        self.initDatabase()
+
+        # Verify database fixture
+        confs = Conference.query(ndb.AND(
+            Conference.seatsAvailable <= 5,
+            Conference.seatsAvailable > 0)
+        ).fetch()
+        assert len(confs) == 1 and confs[0].name == 'room #2' and None == memcache.get(MEMCACHE_ANNOUNCEMENTS_KEY), \
+            "This shouldn't fail. Maybe someone messed with database fixture"
+
+        # Since an announcement was never set `getAnnouncement()` should return an empty StringMessage
+        response = self.api.getAnnouncement(message_types.VoidMessage())
+        assert response.data == '', 'Expected an empty string since no announcement was set'
+
+        # set announcement
+        request = webapp2.Request.blank('/crons/set_announcement')
+        response = request.get_response(main.app)
+        # validate http status
+        assert response.status_int == 204, 'Invalid response expected 204 but got %d' % response.status_int
+
+        # Verify room #2 is listed in the announcement
+        response = self.api.getAnnouncement(message_types.VoidMessage())
+        assert 'room #2' in response.data, 'Announcement is missing a conference'
 
