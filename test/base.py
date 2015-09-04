@@ -64,6 +64,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'city': 'London',
                 'startDate': now,
                 'endDate': now + datetime.timedelta(days=5),
+                'seatsAvailable': 100,
                 'maxAttendees': 100,
                 'sessions': [
                     {'name': 'PHP', 'speaker': 'superman', 'typeOfSession': 'educational',
@@ -81,7 +82,8 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'city': 'Baton Rouge',
                 'startDate': now + datetime.timedelta(days=10),
                 'endDate': now + datetime.timedelta(days=20),
-                'maxAttendees': 5,
+                'seatsAvailable': 1,
+                'maxAttendees': 1,
                 'sessions': []
             },
             {
@@ -90,6 +92,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'topics': ['programming', 'misc'],
                 'startDate': now + datetime.timedelta(days=8),
                 'endDate': now + datetime.timedelta(days=10),
+                'seatsAvailable': 6,
                 'maxAttendees': 6,
                 'sessions': []
             },
@@ -99,6 +102,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'topics': ['misc'],
                 'startDate': now + datetime.timedelta(days=10),
                 'endDate': now + datetime.timedelta(days=20),
+                'seatsAvailable': 6,
                 'maxAttendees': 6,
                 'sessions': [
                     {'name': 'Intro to Poker', 'speaker': 'joker', 'typeOfSession': 'fun',
