@@ -1,6 +1,6 @@
 import sys
 import os
-
+import logging
 
 # https://cloud.google.com/appengine/docs/python/tools/localunittesting?hl=en#Python_Writing_Datastore_and_memcache_tests
 # Make sure your test runner has the appropriate libraries on the Python load path,
@@ -21,6 +21,8 @@ dev_appserver.fix_sys_path()
 import unittest
 
 if '__main__' == __name__:
+    # suppress warnings during test
+    logging.getLogger().setLevel(logging.ERROR)
     # Discover and run tests.
     suite = unittest.loader.TestLoader().discover(os.path.dirname(os.path.realpath(__file__)), pattern='test_*.py')
     unittest.TextTestRunner(verbosity=2).run(suite)
