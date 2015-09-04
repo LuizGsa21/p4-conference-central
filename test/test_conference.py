@@ -492,3 +492,32 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         response = self.api.getAnnouncement(message_types.VoidMessage())
         assert 'room #2' in response.data, 'Announcement is missing a conference'
 
+    def testConferenceEmailConfirmation(self):
+        """ TEST: Send email to organizer confirming creation of Conference """
+        self.mail_stub = self.testbed.get_stub(testbed.MAIL_SERVICE_NAME)
+        self.initDatabase()
+        self.login()
+
+        now = datetime.datetime.now()
+        r = self.api.createConference(ConferenceForm(
+            name='New Conference',
+            organizerUserId=self.getUserId(),
+            topics=['misc'],
+            city='Baton Rouge',
+            startDate=str(now),
+            endDate=str(now + datetime.timedelta(days=5)),
+            maxAttendees=100
+        ))
+        tasks = self.taskqueue_stub.get_filtered_tasks()
+        assert len(tasks) != 0, 'No tasks were added to queue'
+
+        # Run the task
+        request = webapp2.Request.blank(tasks[0].url + '?' + tasks[0].payload)
+        request.method = tasks[0].method
+        response = request.get_response(main.app)
+        assert response.status_int == 200, 'Invalid response expected 200 but got %d' % response.status_int
+        # verify email was sent
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        messages = self.mail_stub.get_sent_messages(to=prof.mainEmail)
+        assert len(messages) == 1, 'Failed to send confirmation email'
+

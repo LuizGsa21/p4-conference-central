@@ -41,6 +41,8 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         self.testbed.init_user_stub()
         self.testbed.init_taskqueue_stub()
         self.taskqueue_stub = self.testbed.get_stub(testbed.TASKQUEUE_SERVICE_NAME)
+        self.testbed.init_mail_stub()
+
         # Clear ndb's in-context cache between tests.
         # This prevents data from leaking between tests.
         # Alternatively, you could disable caching by
