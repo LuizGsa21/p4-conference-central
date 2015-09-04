@@ -349,21 +349,6 @@ class ConferenceApi(remote.Service):
 
 # - - - Profile objects - - - - - - - - - - - - - - - - - - -
 
-    def _copyProfileToForm(self, prof):
-        """Copy relevant fields from Profile to ProfileForm."""
-        # copy relevant fields from Profile to ProfileForm
-        pf = ProfileForm()
-        for field in pf.all_fields():
-            if hasattr(prof, field.name):
-                # convert t-shirt string to Enum; just copy others
-                if field.name == 'teeShirtSize':
-                    setattr(pf, field.name, getattr(TeeShirtSize, getattr(prof, field.name)))
-                else:
-                    setattr(pf, field.name, getattr(prof, field.name))
-        pf.check_initialized()
-        return pf
-
-
     def _getProfileFromUser(self):
         """Return user Profile from datastore, creating new one if non-existent."""
         # make sure user is authed
@@ -407,7 +392,7 @@ class ConferenceApi(remote.Service):
                         prof.put()
 
         # return ProfileForm
-        return self._copyProfileToForm(prof)
+        return prof.toForm()
 
 
     @endpoints.method(message_types.VoidMessage, ProfileForm,
