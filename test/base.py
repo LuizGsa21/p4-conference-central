@@ -1,7 +1,7 @@
 import unittest
 import datetime
 import os
-
+from os.path import dirname
 from google.appengine.api import users
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
@@ -16,6 +16,7 @@ from models import (
 
 from utils import getUserId
 
+_parentDir = os.path.realpath(dirname(dirname(__file__)))
 
 class BaseEndpointAPITestCase(unittest.TestCase):
     """ Base endpoint API unit tests. """
@@ -33,7 +34,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
             # Set require_indexes to false to automatically add indexes to index.yaml
             # NOTE: root_path must also be set
             require_indexes=False,
-            root_path=os.path.pardir,
+            root_path=_parentDir,
         )
         # declare other service stubs
         self.testbed.init_memcache_stub()
