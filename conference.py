@@ -132,25 +132,6 @@ class ConferenceApi(remote.Service):
     """Conference API v0.1"""
 
 # - - - Conference objects - - - - - - - - - - - - - - - - -
-
-    def _copyConferenceToForm(self, conf, displayName):
-        """Copy relevant fields from Conference to ConferenceForm."""
-        cf = ConferenceForm()
-        for field in cf.all_fields():
-            if hasattr(conf, field.name):
-                # convert Date to date string; just copy others
-                if field.name.endswith('Date'):
-                    setattr(cf, field.name, str(getattr(conf, field.name)))
-                else:
-                    setattr(cf, field.name, getattr(conf, field.name))
-            elif field.name == "websafeKey":
-                setattr(cf, field.name, conf.key.urlsafe())
-        if displayName:
-            setattr(cf, 'organizerDisplayName', displayName)
-        cf.check_initialized()
-        return cf
-
-
     def _createConferenceObject(self, request):
         """Create or update Conference object, returning ConferenceForm/request."""
         # preload necessary data items
@@ -240,7 +221,7 @@ class ConferenceApi(remote.Service):
                 setattr(conf, field.name, data)
         conf.put()
         prof = ndb.Key(Profile, user_id).get()
-        return self._copyConferenceToForm(conf, getattr(prof, 'displayName'))
+        return conf.toForm(prof.displayName)
 
 
     @endpoints.method(ConferenceForm, ConferenceForm, path='conference',
@@ -269,8 +250,7 @@ class ConferenceApi(remote.Service):
             raise endpoints.NotFoundException(
                 'No conference found with key: %s' % request.websafeConferenceKey)
         prof = conf.key.parent().get()
-        # return ConferenceForm
-        return self._copyConferenceToForm(conf, getattr(prof, 'displayName'))
+        return conf.toForm(prof.displayName)
 
 
     @endpoints.method(message_types.VoidMessage, ConferenceForms,
@@ -289,7 +269,7 @@ class ConferenceApi(remote.Service):
         prof = ndb.Key(Profile, user_id).get()
         # return set of ConferenceForm objects per Conference
         return ConferenceForms(
-            items=[self._copyConferenceToForm(conf, getattr(prof, 'displayName')) for conf in confs]
+            items=[conf.toForm(prof.displayName) for conf in confs]
         )
 
 
@@ -363,7 +343,7 @@ class ConferenceApi(remote.Service):
 
         # return individual ConferenceForm object per Conference
         return ConferenceForms(
-                items=[self._copyConferenceToForm(conf, names.get(conf.organizerUserId, None)) for conf in conferences]
+            items=[conf.toForm(names.get(conf.organizerUserId, '')) for conf in conferences]
         )
 
 
@@ -549,7 +529,9 @@ class ConferenceApi(remote.Service):
             names[profile.key.id()] = profile.displayName
 
         # return set of ConferenceForm objects per Conference
-        return ConferenceForms(items=[self._copyConferenceToForm(conf, names[conf.organizerUserId]) for conf in conferences if conf]
+        return ConferenceForms(
+            # items=[self._copyConferenceToForm(conf, names[conf.organizerUserId]) for conf in conferences if conf]
+            items=[conf.toForm(names.get(conf.organizerUserId, '')) for conf in conferences]
         )
 
 
