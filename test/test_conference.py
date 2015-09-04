@@ -180,7 +180,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         session = Session.query(Session.name == 'Intro to Poker').get()
         swsk = session.key.urlsafe()
         container = SESSION_WISHLIST_POST_REQUEST.combined_message_class(
-            sessionKey=swsk
+            websafeSessionKey=swsk
         )
         self.login()  # login as default user
         r = self.api.addSessionToWishlist(container)
