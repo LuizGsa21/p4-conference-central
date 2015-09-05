@@ -45,7 +45,7 @@ from settings import ANDROID_CLIENT_ID
 from settings import IOS_CLIENT_ID
 from settings import ANDROID_AUDIENCE
 
-from utils import getUserId
+from utils import getUserId, formToDict
 
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
@@ -133,56 +133,54 @@ class ConferenceApi(remote.Service):
     """Conference API v0.1"""
 
     # - - - Conference objects - - - - - - - - - - - - - - - - -
-    def _createConferenceObject(self, request):
-        """Create or update Conference object, returning ConferenceForm/request."""
-        # preload necessary data items
+    def _createConferenceObject(self, conferenceForm):
+        """Create conference object, returns ConferenceForm."""
+
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
-        user_id = getUserId(user)
 
-        if not request.name:
-            raise endpoints.BadRequestException("Conference 'name' field required")
-
-        # copy ConferenceForm/ProtoRPC Message into dict
-        data = {field.name: getattr(request, field.name) for field in request.all_fields()}
-        del data['websafeKey']
-        del data['organizerDisplayName']
-
-        # add default values for those missing (both data model & outbound Message)
+        data = formToDict(conferenceForm, exclude=('websafeKey', 'organizerDisplayName'))
+        # add default values for those missing
         for df in DEFAULTS:
             if data[df] in (None, []):
                 data[df] = DEFAULTS[df]
-                setattr(request, df, DEFAULTS[df])
+
+        # check required fields
+        for key in Conference.required_fields_schema:
+            if not data[key]:
+                raise endpoints.BadRequestException("Conference '%s' field required" % key)
 
         # convert dates from strings to Date objects; set month based on start_date
-        if data['startDate']:
+        try:
             data['startDate'] = datetime.strptime(data['startDate'][:10], "%Y-%m-%d").date()
-            data['month'] = data['startDate'].month
-        else:
-            data['month'] = 0
-        if data['endDate']:
             data['endDate'] = datetime.strptime(data['endDate'][:10], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            raise endpoints.BadRequestException("Invalid date format. Please use 'YYYY-MM-DD'")
+        data['month'] = data['startDate'].month
 
         # set seatsAvailable to be same as maxAttendees on creation
         if data["maxAttendees"] > 0:
             data["seatsAvailable"] = data["maxAttendees"]
+
         # generate Profile Key based on user ID and Conference
         # ID based on Profile key get Conference key from ID
+        user_id = getUserId(user)
         p_key = ndb.Key(Profile, user_id)
         c_id = Conference.allocate_ids(size=1, parent=p_key)[0]
         c_key = ndb.Key(Conference, c_id, parent=p_key)
         data['key'] = c_key
-        data['organizerUserId'] = request.organizerUserId = user_id
+        data['organizerUserId'] = user_id
 
         # create Conference, send email to organizer confirming
         # creation of Conference & return (modified) ConferenceForm
-        Conference(**data).put()
+        conf = Conference(**data)
+        conf.put()
         taskqueue.add(
-            params={'email': user.email(), 'conferenceInfo': repr(request)},
+            params={'email': user.email(), 'conferenceInfo': repr(conferenceForm)},
             url='/tasks/send_confirmation_email'
         )
-        return request
+        return conf.toForm()
 
     @endpoints.method(ConferenceForm,
                       ConferenceForm,
@@ -583,26 +581,26 @@ class ConferenceApi(remote.Service):
             items=[session.toForm() for session in sessions]
         )
 
-    def _createSessionObject(self, request):
-        """Create or update Session object, returning SessionForm/request."""
+    def _createSessionObject(self, sessionForm):
+        """Create or update Session object, returning SessionForm."""
         # make sure user is authenticated
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
 
         # get the conference
-        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        conf = ndb.Key(urlsafe=sessionForm.websafeConferenceKey).get()
         if not conf:
-            raise endpoints.NotFoundException('No conference found with key: %s' % request.conferenceKey)
+            raise endpoints.NotFoundException('No conference found with key: %s' % sessionForm.conferenceKey)
 
         # check ownership
         if getUserId(user) != conf.organizerUserId:
             raise endpoints.ForbiddenException('Only the organizer of this conference can add sessions.')
 
         # copy SessionForm/ProtoRPC Message into dict
-        data = {field.name: getattr(request, field.name) for field in request.all_fields()}
+        data = formToDict(sessionForm, exclude=('websafeKey', 'websafeConferenceKey'))
         # check required fields
-        for key in ('speaker', 'startTime', 'name', 'duration', 'date', 'typeOfSession'):
+        for key in Session.required_fields_schema:
             if not data[key]:
                 raise endpoints.BadRequestException("'%s' field is required to create a session." % key)
 
@@ -625,9 +623,6 @@ class ConferenceApi(remote.Service):
         s_id = Session.allocate_ids(size=1, parent=conf.key)[0]
         # Datastore returns an integer ID that we can use to create a session key
         data['key'] = ndb.Key(Session, s_id, parent=conf.key)
-        # delete keys not used by `Session`
-        del data['websafeConferenceKey']
-        del data['websafeKey']
         # Add session to datastore
         session = Session(**data)
         session.put()

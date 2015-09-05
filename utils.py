@@ -44,6 +44,6 @@ def getUserId(user, id_type="email"):
         else:
             return str(uuid.uuid1().get_hex())
 
-def formToDict(form):
+def formToDict(form, exclude=()):
     """ Returns a dictionary from the given form/ProtoRPC Message """
-    return {field.name: getattr(form, field.name) for field in form.all_fields()}
+    return {field.name: getattr(form, field.name) for field in form.all_fields() if field.name not in exclude}
