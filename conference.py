@@ -609,7 +609,7 @@ class ConferenceApi(remote.Service):
         # copy SessionForm/ProtoRPC Message into dict
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         # check required fields
-        for key in ('speaker', 'startTime', 'name', 'duration', 'date', 'startTime'):
+        for key in ('speaker', 'startTime', 'name', 'duration', 'date', 'typeOfSession'):
             if not data[key]:
                 raise endpoints.BadRequestException("'%s' field is required to create a session." % key)
 
