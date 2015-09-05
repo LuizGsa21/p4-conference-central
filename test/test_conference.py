@@ -351,15 +351,16 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert count == 0, "This shouldn't fail. Maybe someone messed with database fixture"
 
         r = self.api.getConferencesToAttend(message_types.VoidMessage())
-        assert len(r.items) == count, 'Returned and invalid number of conferences'
+        assert len(r.items) == count, 'Returned an invalid number of conferences'
 
         # register to a conference and test again
-        wsk = Conference.query().get().key.urlsafe()
-        prof.conferenceKeysToAttend.append(wsk)
+        key = Conference.query().get().key
+        prof.conferenceKeysToAttend.append(key)
         prof.put()
 
         r = self.api.getConferencesToAttend(message_types.VoidMessage())
-        assert len(r.items) == count + 1, 'Returned and invalid number of conferences'
+        assert len(r.items) == count + 1, 'Returned an invalid number of conferences'
+        assert r.items[0].websafeKey == key.urlsafe(), 'Returned an invalid websafeKey'
 
     def testRegisterForConference(self):
         """ TEST: Register user for selected conference."""
@@ -425,7 +426,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         assert conf and conf.seatsAvailable == 1 and len(prof.conferenceKeysToAttend) == 0, \
             "This shouldn't fail. Maybe someone messed with database fixture"
 
-        prof.conferenceKeysToAttend.append(conf.key.urlsafe())
+        prof.conferenceKeysToAttend.append(conf.key)
         prof.put()
 
         container = CONF_GET_REQUEST.combined_message_class(
@@ -435,7 +436,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         # unregister conference
         r = self.api.unregisterFromConference(container)
 
-        # re-fetch profile and conference, then check if user was properly registered
+        # re-fetch profile and conference, then check if user was properly unregistered
         prof = prof.key.get()
         conf = conf.key.get()
         assert r.data, 'Returned an invalid response'

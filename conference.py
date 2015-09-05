@@ -453,8 +453,7 @@ class ConferenceApi(remote.Service):
     def getConferencesToAttend(self, request):
         """Get list of conferences that user has registered for."""
         prof = self._getProfileFromUser()  # get user Profile
-        conf_keys = [ndb.Key(urlsafe=wsck) for wsck in prof.conferenceKeysToAttend]
-        conferences = ndb.get_multi(conf_keys)
+        conferences = ndb.get_multi(prof.conferenceKeysToAttend)
 
         # get organizers
         organisers = [ndb.Key(Profile, conf.organizerUserId) for conf in conferences if conf]
@@ -467,48 +466,42 @@ class ConferenceApi(remote.Service):
 
         # return set of ConferenceForm objects per Conference
         return ConferenceForms(
-            # items=[self._copyConferenceToForm(conf, names[conf.organizerUserId]) for conf in conferences if conf]
             items=[conf.toForm(names.get(conf.organizerUserId, '')) for conf in conferences]
         )
 
     @ndb.transactional(xg=True)
     def _conferenceRegistration(self, request, reg=True):
         """Register or unregister user for selected conference."""
-        retval = None
         prof = self._getProfileFromUser()  # get user Profile
 
         # check if conf exists given websafeConfKey
         # get conference; check that it exists
-        wsck = request.websafeConferenceKey
-        conf = ndb.Key(urlsafe=wsck).get()
+        key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        conf = key.get()
         if not conf:
-            raise endpoints.NotFoundException(
-                'No conference found with key: %s' % wsck)
+            raise endpoints.NotFoundException('No conference found with key: %s' % request.websafeConferenceKey)
 
         # register
         if reg:
             # check if user already registered otherwise add
-            if wsck in prof.conferenceKeysToAttend:
-                raise ConflictException(
-                    "You have already registered for this conference")
+            if conf.key in prof.conferenceKeysToAttend:
+                raise ConflictException("You have already registered for this conference")
 
             # check if seats avail
             if conf.seatsAvailable <= 0:
-                raise ConflictException(
-                    "There are no seats available.")
+                raise ConflictException("There are no seats available.")
 
             # register user, take away one seat
-            prof.conferenceKeysToAttend.append(wsck)
+            prof.conferenceKeysToAttend.append(key)
             conf.seatsAvailable -= 1
             retval = True
 
         # unregister
         else:
             # check if user already registered
-            if wsck in prof.conferenceKeysToAttend:
-
+            if key in prof.conferenceKeysToAttend:
                 # unregister user, add back one seat
-                prof.conferenceKeysToAttend.remove(wsck)
+                prof.conferenceKeysToAttend.remove(key)
                 conf.seatsAvailable += 1
                 retval = True
             else:

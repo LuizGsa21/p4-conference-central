@@ -24,10 +24,10 @@ class ConflictException(endpoints.ServiceException):
 
 class Profile(ndb.Model):
     """Profile -- User profile object"""
-    displayName = ndb.StringProperty()
+    displayName = ndb.StringProperty(default='')
     mainEmail = ndb.StringProperty()
     teeShirtSize = ndb.StringProperty(default='NOT_SPECIFIED')
-    conferenceKeysToAttend = ndb.StringProperty(repeated=True)
+    conferenceKeysToAttend = ndb.KeyProperty(kind='Conference', repeated=True)
     sessionKeysInWishList = ndb.KeyProperty(kind='Session', repeated=True)
 
     def toForm(self):
