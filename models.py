@@ -28,7 +28,7 @@ class Profile(ndb.Model):
     mainEmail = ndb.StringProperty()
     teeShirtSize = ndb.StringProperty(default='NOT_SPECIFIED')
     conferenceKeysToAttend = ndb.StringProperty(repeated=True)
-    sessionKeysInWishList = ndb.StringProperty(repeated=True)
+    sessionKeysInWishList = ndb.KeyProperty(kind='Session', repeated=True)
 
     def toForm(self):
         form = ProfileForm(

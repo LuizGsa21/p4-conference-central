@@ -661,16 +661,16 @@ class ConferenceApi(remote.Service):
         # get user Profile
         prof = self._getProfileFromUser()
         # get session and check if it exists
-        wssk = request.websafeSessionKey
-        session = ndb.Key(urlsafe=wssk).get()
+        key = ndb.Key(urlsafe=request.websafeSessionKey)
+        session = key.get()
 
         if not session:
-            raise endpoints.BadRequestException("Session with key %s doesn't exist" % request.sessionKey)
+            raise endpoints.BadRequestException("Session with key %s doesn't exist" % request.websafeSessionKey)
         # Check if session is already in users wishlist
-        if wssk in prof.sessionKeysInWishList:
+        if key in prof.sessionKeysInWishList:
             raise ConflictException("This session is already in user's wishlist")
         # add session to users wishlist
-        prof.sessionKeysInWishList.append(wssk)
+        prof.sessionKeysInWishList.append(key)
         prof.put()
         return BooleanMessage(data=True)
 
@@ -684,14 +684,14 @@ class ConferenceApi(remote.Service):
         # get user Profile
         prof = self._getProfileFromUser()
         # get session and check if it exists
-        wssk = request.websafeSessionKey
-        session = ndb.Key(urlsafe=wssk).get()
+        key = ndb.Key(urlsafe=request.websafeSessionKey)
+        session = key.get()
         if not session:
-            raise endpoints.BadRequestException("Session with key %s doesn't exist" % wssk)
-        if wssk not in prof.sessionKeysInWishList:
+            raise endpoints.BadRequestException("Session with key %s doesn't exist" % request.websafeSessionKey)
+        if key not in prof.sessionKeysInWishList:
             raise endpoints.BadRequestException("Failed to find session in user's wishlist")
         # remove session from users wishlist
-        prof.sessionKeysInWishList.remove(wssk)
+        prof.sessionKeysInWishList.remove(key)
         prof.put()
         return BooleanMessage(data=True)
 
@@ -705,7 +705,7 @@ class ConferenceApi(remote.Service):
         # get user Profile
         prof = self._getProfileFromUser()
         # get all sessions in users wishlist
-        sessions = ndb.get_multi([ndb.Key(urlsafe=wssk) for wssk in prof.sessionKeysInWishList])
+        sessions = ndb.get_multi(prof.sessionKeysInWishList)
         # return a set of `SessionForm` objects
         return SessionForms(items=[session.toForm() for session in sessions])
 
