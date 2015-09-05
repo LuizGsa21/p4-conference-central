@@ -55,9 +55,12 @@ class BaseEndpointAPITestCase(unittest.TestCase):
     def initDatabase(self):
         """ Adds database fixtures """
         _profiles = [
-            {'displayName': 'Luiz', 'mainEmail': 'test1@test.com', 'teeShirtSize': 'NOT_SPECIFIED', 'conferenceKeysToAttend': []},
-            {'displayName': 'Batman', 'mainEmail': 'test2@test.com', 'teeShirtSize': 'NOT_SPECIFIED', 'conferenceKeysToAttend': []},
-            {'displayName': 'Goku', 'mainEmail': 'test3@test.com', 'teeShirtSize': 'NOT_SPECIFIED', 'conferenceKeysToAttend': []}
+            {'displayName': 'Luiz', 'mainEmail': 'test1@test.com', 'teeShirtSize': 'NOT_SPECIFIED',
+             'conferenceKeysToAttend': [], 'wishList': []},
+            {'displayName': 'Batman', 'mainEmail': 'test2@test.com', 'teeShirtSize': 'NOT_SPECIFIED',
+             'conferenceKeysToAttend': [], 'wishList': []},
+            {'displayName': 'Goku', 'mainEmail': 'test3@test.com', 'teeShirtSize': 'NOT_SPECIFIED',
+             'conferenceKeysToAttend': [], 'wishList': []}
         ]
         # add profiles to database
         ndb.put_multi([Profile(key=ndb.Key(Profile, p['mainEmail']),**p) for p in _profiles])

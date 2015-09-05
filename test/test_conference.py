@@ -199,7 +199,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         self.login()  # login as default user
         r = self.api.addSessionToWishlist(container)
         profile = ndb.Key(Profile, self.getUserId()).get()
-        assert r.data and session.key in profile.sessionKeysInWishList, "Failed to add session to user's wish list"
+        assert r.data and session.key in profile.wishList, "Failed to add session to user's wish list"
 
     def testRemoveSessionFromWishlist(self):
         """ TEST: Remove session from user's wishlist """
@@ -209,10 +209,10 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         # verify database fixture
         prof = ndb.Key(Profile, self.getUserId()).get()
         session = Session.query(Session.name == 'Intro to Poker').get()
-        assert session and len(prof.sessionKeysInWishList) == 0,\
+        assert session and len(prof.wishList) == 0,\
             "This shouldn't fail. Maybe someone messed with database fixture"
         # manually add a session to user's wishlist
-        prof.sessionKeysInWishList.append(session.key)
+        prof.wishList.append(session.key)
         prof.put()
 
         # build request
@@ -223,7 +223,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         r = self.api.removeSessionFromWishlist(container)
         # re-fetch profile then verify session was removed
         prof = prof.key.get()
-        assert r.data and session.key not in prof.sessionKeysInWishList, "Failed to remove session from user's wish list"
+        assert r.data and session.key not in prof.wishList, "Failed to remove session from user's wish list"
 
     def testGetSessionsInWishlist(self):
         """ TEST: Get sessions in user's wish list """
@@ -231,7 +231,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
         self.login()  # login as default user
         profile = ndb.Key(Profile, self.getUserId()).get()
-        pSessionKeys = profile.sessionKeysInWishList
+        pSessionKeys = profile.wishList
 
         assert len(pSessionKeys) == 0, "This shouldn't fail. Maybe someone messed with database fixture"
 

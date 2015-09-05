@@ -655,10 +655,10 @@ class ConferenceApi(remote.Service):
         if not session:
             raise endpoints.BadRequestException("Session with key %s doesn't exist" % request.websafeSessionKey)
         # Check if session is already in users wishlist
-        if key in prof.sessionKeysInWishList:
+        if key in prof.wishList:
             raise ConflictException("This session is already in user's wishlist")
         # add session to users wishlist
-        prof.sessionKeysInWishList.append(key)
+        prof.wishList.append(key)
         prof.put()
         return BooleanMessage(data=True)
 
@@ -676,10 +676,10 @@ class ConferenceApi(remote.Service):
         session = key.get()
         if not session:
             raise endpoints.BadRequestException("Session with key %s doesn't exist" % request.websafeSessionKey)
-        if key not in prof.sessionKeysInWishList:
+        if key not in prof.wishList:
             raise endpoints.BadRequestException("Failed to find session in user's wishlist")
         # remove session from users wishlist
-        prof.sessionKeysInWishList.remove(key)
+        prof.wishList.remove(key)
         prof.put()
         return BooleanMessage(data=True)
 
@@ -693,7 +693,7 @@ class ConferenceApi(remote.Service):
         # get user Profile
         prof = self._getProfileFromUser()
         # get all sessions in users wishlist
-        sessions = ndb.get_multi(prof.sessionKeysInWishList)
+        sessions = ndb.get_multi(prof.wishList)
         # return a set of `SessionForm` objects
         return SessionForms(items=[session.toForm() for session in sessions])
 
