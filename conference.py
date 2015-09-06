@@ -157,6 +157,9 @@ class ConferenceApi(remote.Service):
             data['endDate'] = datetime.strptime(data['endDate'][:10], "%Y-%m-%d").date()
         except (TypeError, ValueError):
             raise endpoints.BadRequestException("Invalid date format. Please use 'YYYY-MM-DD'")
+
+        if data['startDate'] > data['endDate']:
+            raise endpoints.BadRequestException("start date must be before end date")
         data['month'] = data['startDate'].month
 
         # set seatsAvailable to be same as maxAttendees on creation

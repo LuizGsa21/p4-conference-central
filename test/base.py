@@ -65,7 +65,7 @@ class BaseEndpointAPITestCase(unittest.TestCase):
         # add profiles to database
         ndb.put_multi([Profile(key=ndb.Key(Profile, p['mainEmail']),**p) for p in _profiles])
 
-        now = datetime.datetime.now()
+        baseDate = datetime.datetime(2015, 8, 1)
         # 3 conferences with `test1@test.com`
         # 1 conference with `test2@test.com`
         _conferences = [
@@ -74,17 +74,17 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'organizerUserId': 'test1@test.com',
                 'topics': ['programming', 'web design', 'web performance'],
                 'city': 'London',
-                'startDate': now,
-                'endDate': now + datetime.timedelta(days=5),
+                'startDate': baseDate,
+                'endDate': baseDate + datetime.timedelta(days=5),
                 'seatsAvailable': 100,
                 'maxAttendees': 100,
                 'sessions': [
                     {'name': 'PHP', 'speaker': 'superman', 'typeOfSession': 'educational',
-                     'date': (now + datetime.timedelta(days=10)).date(),
-                     'startTime': (now + datetime.timedelta(days=1)).time(), 'duration': 60},
+                     'date': (baseDate + datetime.timedelta(days=1)).date(),
+                     'startTime': datetime.time(hour=6), 'duration': 60},
                     {'name': 'Python', 'speaker': 'flash', 'typeOfSession': 'educational',
-                     'date': (now + datetime.timedelta(days=10)).date(),
-                     'startTime': (now + datetime.timedelta(days=1, hours=1)).time(), 'duration': 60}
+                     'date': (baseDate + datetime.timedelta(days=1)).date(),
+                     'startTime': datetime.time(hour=6), 'duration': 60}
                 ]
             },
             {
@@ -92,8 +92,8 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'organizerUserId': 'test1@test.com',
                 'topics': ['web performance'],
                 'city': 'Baton Rouge',
-                'startDate': now + datetime.timedelta(days=10),
-                'endDate': now + datetime.timedelta(days=20),
+                'startDate': baseDate + datetime.timedelta(days=1),
+                'endDate': baseDate + datetime.timedelta(days=11),
                 'seatsAvailable': 1,
                 'maxAttendees': 1,
                 'sessions': []
@@ -102,8 +102,8 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'name': 'room #3',
                 'organizerUserId': 'test1@test.com',
                 'topics': ['programming', 'misc'],
-                'startDate': now + datetime.timedelta(days=8),
-                'endDate': now + datetime.timedelta(days=10),
+                'startDate': baseDate + datetime.timedelta(days=8),
+                'endDate': baseDate + datetime.timedelta(days=10),
                 'seatsAvailable': 6,
                 'maxAttendees': 6,
                 'sessions': []
@@ -112,17 +112,17 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'name': 'room #4',
                 'organizerUserId': 'test2@test.com',
                 'topics': ['misc'],
-                'startDate': now + datetime.timedelta(days=10),
-                'endDate': now + datetime.timedelta(days=20),
+                'startDate': baseDate + datetime.timedelta(days=10),
+                'endDate': baseDate + datetime.timedelta(days=20),
                 'seatsAvailable': 6,
                 'maxAttendees': 6,
                 'sessions': [
                     {'name': 'Intro to Poker', 'speaker': 'joker', 'typeOfSession': 'fun',
-                     'date': (now + datetime.timedelta(days=10)).date(),
-                     'startTime': (now + datetime.timedelta(days=10)).time(), 'duration': 60},
+                     'date': (baseDate + datetime.timedelta(days=10)).date(),
+                     'startTime': datetime.time(hour=6), 'duration': 60},
                     {'name': 'Google App Engine', 'speaker': 'Bill Gates', 'typeOfSession': 'informative',
-                     'date': (now + datetime.timedelta(days=10)).date(),
-                     'startTime': (now + datetime.timedelta(days=10, hours=1)).time(), 'duration': 60}
+                     'date': (baseDate + datetime.timedelta(days=10)).date(),
+                     'startTime': datetime.time(hour=8), 'duration': 60},
                 ]
 
             }

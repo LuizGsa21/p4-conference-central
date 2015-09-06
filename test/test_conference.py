@@ -1,5 +1,5 @@
 import datetime
-from endpoints import UnauthorizedException, ForbiddenException, get_current_user
+from endpoints import UnauthorizedException, ForbiddenException, BadRequestException, get_current_user
 from base import BaseEndpointAPITestCase
 from utils import formToDict
 from google.appengine.api import users
@@ -276,15 +276,31 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         self.login()
 
         now = datetime.datetime.now()
-        r = self.api.createConference(ConferenceForm(
-            name='New Conference',
-            organizerUserId=self.getUserId(),
-            topics=['misc'],
-            city='Baton Rouge',
-            startDate=str(now),
-            endDate=str(now + datetime.timedelta(days=5)),
-            maxAttendees=100
-        ))
+        # first test using an invalid conference
+        conf = {
+            'name': 'New Conference',
+            'organizerUserId': self.getUserId(),
+            'topics': ['misc'],
+            'city': 'Baton Rouge',
+            'startDate': str(now + datetime.timedelta(days=5)),
+            'endDate': str(now),
+            'maxAttendees': 100
+        }
+
+        # Attempt to add a conference where startDate > endDate. (this should fail)
+        try:
+            r = self.api.createConference(ConferenceForm(**conf))
+            assert False, 'BadRequestException should of been thrown...'
+        except BadRequestException:
+            pass
+        # make sure conference wasn't added
+        assert Conference.query(Conference.name == 'New Conference').count() == 0, \
+            'A conference with startDate > endDate should not be added to the database'
+
+        # add a conference using valid startDate and endDate
+        conf['startDate'] = str(now)
+        conf['endDate'] = str(now + datetime.timedelta(days=5))
+        r = self.api.createConference(ConferenceForm(**conf))
         assert Conference.query(Conference.name == 'New Conference').count() == 1, \
             'Failed to add conference to datastore'
         assert r.name == 'New Conference', 'Returned an invalid conference'
