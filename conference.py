@@ -52,6 +52,7 @@ API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
 MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
+MEMCACHE_FEATURED_SPEAKER_KEY = 'FEATURED_SPEAKERS'
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -657,6 +658,9 @@ class ConferenceApi(remote.Service):
         if data['duration'] <= 0:
             raise endpoints.BadRequestException("Duration must be greater than zero")
 
+        if data['date'] < conf.startDate or data['date'] > conf.endDate:
+            raise endpoints.BadRequestException("Session must be within range of conference start and end date")
+
         # ask Datastore to allocate an ID.
         s_id = Session.allocate_ids(size=1, parent=conf.key)[0]
         # Datastore returns an integer ID that we can use to create a session key
@@ -664,6 +668,12 @@ class ConferenceApi(remote.Service):
         # Add session to datastore
         session = Session(**data)
         session.put()
+
+        # Add task to queue
+        taskqueue.add(
+            params={'websafeConferenceKey': conf.key.urlsafe(), 'speaker': session.speaker},
+            url='/tasks/set_featured_speaker'
+        )
 
         return session.toForm()
 
@@ -817,6 +827,16 @@ class ConferenceApi(remote.Service):
         """ Query for sessions. Uses `SESSION_FIELDS` and `OPERATORS` to construct query. """
         sessions = self._buildQuery(Session, request.filters, SESSION_FIELDS, order_by=['typeOfSession'])
         return SessionForms(items=[session.toForm() for session in sessions])
+
+    @endpoints.method(message_types.VoidMessage,
+                      StringMessage,
+                      path='conference/featured_speakers/get',
+                      http_method='GET',
+                      name='getFeaturedSpeaker')
+    def getFeaturedSpeaker(self, request):
+        """Returns the featured speakers and their registered sessions from memcache."""
+        return StringMessage(data=memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY) or "")
+
 
 
 api = endpoints.api_server([ConferenceApi])  # register API

@@ -19,6 +19,7 @@ from conference import (
     SESSION_BY_SPEAKER_GET_REQUEST,
     SESSION_WISHLIST_POST_REQUEST,
     MEMCACHE_ANNOUNCEMENTS_KEY,
+    MEMCACHE_FEATURED_SPEAKER_KEY,
     CONF_POST_REQUEST,
     SESSION_FIELDS
 
@@ -152,7 +153,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
             'name': 'Computer programming',
             'speaker': 'Donald Knuth',
             'typeOfSession': 'educational',
-            'date': '2015-09-10',
+            'date': '2015-08-6',
             'startTime': '11:00',
             'duration': 100
         }
@@ -540,6 +541,59 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         prof = ndb.Key(Profile, self.getUserId()).get()
         messages = self.mail_stub.get_sent_messages(to=prof.mainEmail)
         assert len(messages) == 1, 'Failed to send confirmation email'
+
+    def testGetFeaturedSpeaker(self):
+        """ TEST: Returns the featured speakers and their registered sessions from memcache. """
+        self.initDatabase()
+        # Verify database fixture
+        speakers = {}
+        for session in Session.query():
+            assert speakers.get(session.speaker, None) is None, \
+                "This shouldn't fail. Maybe someone messed with database fixture"
+            speakers[session.name] = session.key
+        assert None == memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY), \
+            "This shouldn't fail. Maybe someone messed with database fixture"
+
+        # Since a featured speaker was never set `getFeaturedSpeaker()` should return an empty StringMessage
+        response = self.api.getFeaturedSpeaker(message_types.VoidMessage())
+        assert response.data == '', 'Expected an empty string since no announcement was set'
+
+        # Login and grab a conference owned by the current user
+        self.login()
+        conf = Conference.query(ancestor=ndb.Key(Profile, self.getUserId())).get()
+
+        # Add 2 sessions with the same speaker using `createSession` endpoint
+        sessions = [
+            {'name': 'PHP', 'speaker': 'hitler', 'typeOfSession': 'educational',
+             'date': str(conf.startDate), 'startTime': '08:00', 'duration': 60},
+            {'name': 'Python', 'speaker': 'hitler', 'typeOfSession': 'educational',
+             'date': str(conf.startDate), 'startTime': '12:30', 'duration': 60},
+        ]
+        initial_count = Session.query().count()
+        for session in sessions:
+            container = SESSION_POST_REQUEST.combined_message_class(
+                websafeConferenceKey=conf.key.urlsafe(),
+                **session
+            )
+            self.api.createSession(container)
+        count = Session.query().count()
+        assert count == initial_count + 2, 'Failed to add sessions to conference...'
+
+        tasks = self.taskqueue_stub.get_filtered_tasks()
+        assert len(tasks) == 2, 'No tasks were added to queue'
+        for task in tasks:
+            request = webapp2.Request.blank(task.url + '?' + task.payload)
+            request.method = task.method
+            response = request.get_response(main.app)
+            # validate http status
+            assert response.status_int == 204, 'Invalid response expected 204 but got %d' % response.status_int
+
+        # Verify featured speaker has been updated
+        response = self.api.getFeaturedSpeaker(message_types.VoidMessage())
+        data = response.data
+        assert 'hitler' in data and\
+               'PHP' in data and\
+               'Python' in data, 'Failed to update featured speaker'
 
     def testTask3QueryProblem(self):
         """ TEST: Solve task 3 "the query related problem"  """
