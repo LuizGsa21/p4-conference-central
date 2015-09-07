@@ -81,10 +81,10 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                 'sessions': [
                     {'name': 'PHP', 'speaker': 'superman', 'typeOfSession': 'educational',
                      'date': (baseDate + datetime.timedelta(days=1)).date(),
-                     'startTime': datetime.time(hour=6), 'duration': 60},
+                     'startTime': datetime.time(hour=20), 'duration': 60},
                     {'name': 'Python', 'speaker': 'flash', 'typeOfSession': 'educational',
                      'date': (baseDate + datetime.timedelta(days=1)).date(),
-                     'startTime': datetime.time(hour=6), 'duration': 60}
+                     'startTime': datetime.time(hour=22), 'duration': 60}
                 ]
             },
             {
@@ -123,6 +123,13 @@ class BaseEndpointAPITestCase(unittest.TestCase):
                     {'name': 'Google App Engine', 'speaker': 'Bill Gates', 'typeOfSession': 'informative',
                      'date': (baseDate + datetime.timedelta(days=10)).date(),
                      'startTime': datetime.time(hour=8), 'duration': 60},
+                    {'name': 'My Workshop 1', 'speaker': 'Bill Gates', 'typeOfSession': 'workshop',
+                     'date': datetime.datetime.strptime('2015-08-11', '%Y-%m-%d'),
+                     'startTime': datetime.time(hour=10), 'duration': 60},
+                    {'name': 'My Workshop 2', 'speaker': 'Bill Gates', 'typeOfSession': 'workshop',
+                     'date': datetime.datetime.strptime('2015-08-11', '%Y-%m-%d'),
+                     'startTime': datetime.time(hour=7), 'duration': 60}
+
                 ]
 
             }

@@ -47,3 +47,31 @@ def getUserId(user, id_type="email"):
 def formToDict(form, exclude=()):
     """ Returns a dictionary from the given form/ProtoRPC Message """
     return {field.name: getattr(form, field.name) for field in form.all_fields() if field.name not in exclude}
+
+def expression_closure(field, operator, value):
+    """ Creates and returns a function expression.
+        Operator supports: < <= > >= !=
+
+        Example:
+            >>> class Obj:
+            >>>     number = 5
+            >>> obj = Obj()
+            >>> func_expression = expression_closure('number', '<', 10)
+            >>> func_expression(obj)
+            True
+            >>> obj.number = 11
+            >>> func_expression(obj)
+            False
+    """
+    if operator == '>':
+        return lambda obj: getattr(obj, field) > value
+    elif operator == '<':
+        return lambda obj: getattr(obj, field) < value
+    elif operator == '>=':
+        return lambda obj: getattr(obj, field) >= value
+    elif operator == '<=':
+        return lambda obj: getattr(obj, field) <= value
+    elif operator == '!=':
+        return lambda obj: getattr(obj, field) != value
+    else:
+        raise ValueError("Unknown operator %s" % operator)

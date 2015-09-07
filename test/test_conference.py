@@ -1,4 +1,7 @@
 import datetime
+import pprint
+import unittest
+import runner
 from endpoints import UnauthorizedException, ForbiddenException, BadRequestException, get_current_user
 from base import BaseEndpointAPITestCase
 from utils import formToDict
@@ -16,7 +19,8 @@ from conference import (
     SESSION_BY_SPEAKER_GET_REQUEST,
     SESSION_WISHLIST_POST_REQUEST,
     MEMCACHE_ANNOUNCEMENTS_KEY,
-    CONF_POST_REQUEST
+    CONF_POST_REQUEST,
+    SESSION_FIELDS
 
 )
 
@@ -537,3 +541,86 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         messages = self.mail_stub.get_sent_messages(to=prof.mainEmail)
         assert len(messages) == 1, 'Failed to send confirmation email'
 
+    def testTask3QueryProblem(self):
+        """ TEST: Solve task 3 "the query related problem"  """
+        # Solve the following query related problem:
+        # - Let's say that you don't like workshops and you don't like sessions after 7 pm.
+        #   How would you handle a query for all non-workshop sessions before 7 pm?
+        #   What is the problem for implementing this query? What ways to solve it did you think of?
+
+        # init and verify database fixture
+        self.initDatabase()
+        workshopSessions = Session.query(Session.typeOfSession == 'workshop').fetch()
+        assert len(workshopSessions) == 2, "This shouldn't fail. Maybe someone messed with database fixture"
+        # manually get the solution so we can compare it against the response
+        validSessions = []
+        for session in Session.query(Session.startTime < datetime.datetime.strptime('19:00', '%H:%M').time()):
+            if session not in workshopSessions:
+                validSessions.append(session)
+        assert len(validSessions) > 0, "This shouldn't fail. Maybe someone messed with database fixture"
+
+        # create a query using `sessionQueryForms()` and add 2 inequalities
+        form = SessionQueryForms()
+        form.filters = [
+            SessionQueryForm(field='TYPE_OF_SESSION', operator='NE', value='workshop'),
+            SessionQueryForm(field='START_TIME', operator='LT', value='19:00')
+        ]
+        response = self.api.querySessions(form)
+        # evaluate the response
+        sessions = response.items
+        assert len(sessions) == len(validSessions), 'Returned an invalid number of sessions'
+        validKeys = [v.key.urlsafe() for v in validSessions]
+        for s in sessions:
+            assert s.websafeKey in validKeys, 'Returned an invalid session'
+
+        # ----- Attempt a 9 inequality query -----------
+        # Create a unique session
+        uniqueSession = {'name': 'BONUS ROUND', 'speaker': 'BONUS ROUND', 'typeOfSession': 'BONUS ROUND',
+                         'date': datetime.datetime.strptime('2015-12-12', '%Y-%m-%d'),
+                         'startTime': datetime.time(hour=3), 'duration': 200}
+        # verify this session is unique
+        for key, value in uniqueSession.iteritems():
+            count = Session.query(Session._properties[key] == value).count()
+            assert count == 0, 'Ahhh failed to setup bonus round, maybe someone messed with the database fixture'
+
+        # add unique session to database
+        conf = Conference.query().get()
+        c_id = Session.allocate_ids(size=1, parent=conf.key)[0]
+        uniqueSession['key'] = ndb.Key(Session, c_id, parent=conf.key)
+        Session(**uniqueSession).put()
+
+        # create a form with multiple inequalities
+        inequalities = [
+            {'field': 'START_TIME', 'operator': 'GTEQ', 'value': '02:30'},
+            {'field': 'DATE', 'operator': 'LTEQ', 'value': '2015-12-12'},
+            {'field': 'DURATION', 'operator': 'GT', 'value': '30'}
+        ]
+        form = SessionQueryForms()
+        for inequality in inequalities:
+            form.filters.append(SessionQueryForm(**inequality))
+
+        # grab all sessions (EXCLUDING unique session)
+        sessions = Session.query(Session.key != uniqueSession['key']).fetch()
+        assert len(sessions) == 6
+        # add additional inequalities using the session names
+        for session in sessions:
+            form.filters.append(SessionQueryForm(
+                field='NAME',
+                operator='NE',
+                value=session.name
+            ))
+        # 9 inequality filters
+        assert len(form.filters) == 9, 'Ahhh failed to setup bonus round, expected 9 inequality filters'
+        # From the way the test was setup, `START_TIME` will be the only
+        # property filtered by datastore. Everything else will be filtered using python.
+
+        # make the query using the 9 inequality filters to retrieve the `uniqueSession`
+        response = self.api.querySessions(form)
+        assert len(response.items) == 1
+        assert response.items[0].name == 'BONUS ROUND'
+
+
+
+
+if __name__ == '__main__':
+    unittest.main()

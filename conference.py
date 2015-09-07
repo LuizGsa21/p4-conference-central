@@ -12,7 +12,7 @@ created by wesc on 2014 apr 21
 
 __author__ = 'wesc+api@google.com (Wesley Chun)'
 
-from datetime import datetime
+from datetime import datetime, time, date
 
 import endpoints
 from protorpc import messages
@@ -45,7 +45,7 @@ from settings import ANDROID_CLIENT_ID
 from settings import IOS_CLIENT_ID
 from settings import ANDROID_AUDIENCE
 
-from utils import getUserId, formToDict
+from utils import getUserId, formToDict, expression_closure
 
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
@@ -273,51 +273,86 @@ class ConferenceApi(remote.Service):
             items=[conf.toForm(prof.displayName) for conf in confs]
         )
 
-    def _getQuery(self, request):
-        """Return formatted query from the submitted filters."""
-        q = Conference.query()
-        inequality_filter, filters = self._formatFilters(request.filters, CONFERENCE_FIELDS)
+    def _buildQuery(self, model_class, filters, field_mapping, order_by=None):
+        """Returns a formatted query from the submitted filters.
+           If the query contains multiple inequalities, returns the filtered set.
+            Note:
+                Only the first inequality is handled by the datastore,
+                any additional inequalities will be filtered using python.
 
-        # If exists, sort on inequality filter first
-        if not inequality_filter:
-            q = q.order(Conference.name)
-        else:
-            q = q.order(ndb.GenericProperty(inequality_filter))
-            q = q.order(Conference.name)
+        :param model_class: The model class used when building the query. `Model.query()`
+        :type model_class: ndb.Model
+
+        :param filters: a list of QueryForms
+        :type filters: list
+
+        :param field_mapping:
+            A dictionary mapping `filter.field` to `model.property`.
+            Look at `CONFERENCE_FIELDS` or `SESSION_FIELDS` for example.
+        :type field_mapping: dict
+
+        :param order_by:
+            A list of names representing the model property to order by.
+            If an inequality exists, the first inequality will have priority
+            against other fields.
+        :type order_by: list
+        """
+        q = model_class.query()
+        inequality_filters, filters = self._formatFilters(filters, field_mapping)
+
+        if order_by:
+            # If an inequality exists, we must sort it first.
+            if inequality_filters:
+                # get the first inequality. (The inequality that is handled by datastore)
+                inequality_in_query = inequality_filters[0]['field']
+
+                q = q.order(ndb.GenericProperty(inequality_in_query))
+
+                # If the same property is in `order_by`, remove it so we don't reapply it
+                if inequality_in_query in order_by:
+                    order_by.remove(inequality_in_query)
+
+            # add any additional orders
+            for key in order_by:
+                q = q.order(getattr(model_class, key))
 
         for filtr in filters:
-            if filtr["field"] in ["month", "maxAttendees"]:
-                filtr["value"] = int(filtr["value"])
-            formatted_query = ndb.query.FilterNode(filtr["field"], filtr["operator"], filtr["value"])
+            # when building a query using filterNode, `modelProperty._to_base_type` is not called on the value argument.
+            # This leads to problems when dealing with DateProperty and TimeProperty.
+            # So when parsing the filter tell it to convert to base type
+            self._parseFilter(model_class, filtr, to_base_type=True)
+            formatted_query = ndb.query.FilterNode(filtr["field"], filtr["operator"], filtr['value'])
             q = q.filter(formatted_query)
-        return q
 
-    def _formatFilters(self, filters, fields):
-        """Parse, check validity and format user supplied filters."""
-        formatted_filters = []
-        inequality_field = None
+        # return the query if there are no additional inequalities
+        if len(inequality_filters) <= 1:
+            return q
+        # Any additional inequalities must be implemented with Python.
 
-        for f in filters:
-            filtr = {field.name: getattr(f, field.name) for field in f.all_fields()}
-
-            try:
-                filtr["field"] = fields[filtr["field"]]
-                filtr["operator"] = OPERATORS[filtr["operator"]]
-            except KeyError:
-                raise endpoints.BadRequestException("Filter contains invalid field or operator.")
-
-            # Every operation except "=" is an inequality
-            if filtr["operator"] != "=":
-                # check if inequality operation has been used in previous filters
-                # disallow the filter if inequality was performed on a different field before
-                # track the field on which the inequality operation is performed
-                if inequality_field and inequality_field != filtr["field"]:
-                    raise endpoints.BadRequestException("Inequality filter is allowed on only one field.")
-                else:
-                    inequality_field = filtr["field"]
-
-            formatted_filters.append(filtr)
-        return inequality_field, formatted_filters
+        # Make a asynchronous query so we can create our closures while waiting for the request.
+        rows = q.fetch_async()
+        # remove the inequality handled by datastore
+        inequality_filters.pop(0)
+        # For each inequality we will create a closure so we can quickly
+        # test the condition when looping through the returned result.
+        filters = []
+        for filtr in inequality_filters:
+            # parse the filter. we don't need to convert to base type.
+            self._parseFilter(model_class, filtr)
+            # add the returned function to `filters`
+            filters.append(expression_closure(**filtr))
+        filtered_rows = []
+        for row in rows.get_result():
+            is_valid = True  # assume this row passes all filters
+            for filtr in filters:
+                # If one filter returns false, mark this row as invalid and break out of the loop
+                if not filtr(row):
+                    is_valid = False
+                    break
+            if is_valid:
+                filtered_rows.append(row)
+        # return the filtered set
+        return filtered_rows
 
     def _getProfileFromUser(self):
         """Return user Profile from datastore, creating new one if non-existent."""
@@ -352,7 +387,7 @@ class ConferenceApi(remote.Service):
     def queryConferences(self, request):
         """Query for conferences."""
 
-        conferences = self._getQuery(request).fetch()
+        conferences = self._buildQuery(Conference, request.filters, CONFERENCE_FIELDS, order_by=['name'])
 
         # need to fetch organiser displayName from profiles
         # get all keys and use get_multi for speed
@@ -700,31 +735,78 @@ class ConferenceApi(remote.Service):
         # return a set of `SessionForm` objects
         return SessionForms(items=[session.toForm() for session in sessions])
 
-    def _querySessions(self, filters):
-        q = Session.query()
-        inequality_filter, filters = self._formatFilters(filters, SESSION_FIELDS)
+    def _formatFilters(self, filters, fields):
+        """Parse, check validity and format user supplied filters."""
+        # formatted_filters:
+        #   All filters to be used in query. (including a single inequality)
+        formatted_filters = []
+        # inequality_fields:
+        #   All inequality filters.
+        inequality_fields = []
 
-        if inequality_filter:
-            q = q.order(ndb.GenericProperty(inequality_filter))
+        for f in filters:
+            filtr = {field.name: getattr(f, field.name) for field in f.all_fields()}
+            try:
+                filtr["field"] = fields[filtr["field"]]
+                filtr["operator"] = OPERATORS[filtr["operator"]]
+            except KeyError:
+                raise endpoints.BadRequestException("Filter contains invalid field or operator.")
 
-        for filtr in filters:
-            if filtr["field"] == 'date':
-                # convert date string to a datetime object.
-                try:
-                    filtr['value'] = datetime.strptime(filtr["field"][:10], "%Y-%m-%d").date()
-                except ValueError:
-                    raise endpoints.BadRequestException("Invalid date format. Please use 'YYYY-MM-DD'")
-            elif filtr["field"] == 'startTime':
-                # convert date string to a time object. HH:MM
-                try:
-                    filtr['value'] = datetime.strptime(filtr["field"][:5], "%H:%M").time()
-                except ValueError:
-                    raise endpoints.BadRequestException("Invalid time format. Please use 'HH:MM'")
-            elif filtr['field'] == 'duration':
-                filtr["value"] = int(filtr["value"])
+            # Every operation except "=" is an inequality
+            if filtr["operator"] != "=":
+                if not inequality_fields:
+                    # only the first inequality is added to `formatted_filters`
+                    formatted_filters.append(filtr)
+                inequality_fields.append(filtr)
+            else:
+                formatted_filters.append(filtr)
+        return inequality_fields, formatted_filters
 
-            formatted_query = ndb.query.FilterNode(filtr["field"], filtr["operator"], filtr["value"])
-            return q.filter(formatted_query)
+    def _parseFilter(self, model, filtr, to_base_type=False):
+        """ Parses a filter value according to the model property
+
+            Example:
+                Assuming `Conference` has a DateProperty named `date`.
+
+                model = Conference
+                filtr = {'field': 'date', 'value': '2015-01-01'}
+                _parseFilter(model, filtr, to_base_type=True)
+
+                print filtr
+                output: {'field': 'date', 'value': datetime.datetime(2015, 1, 1, 0, 0)}
+                # Note that filtr['value'] is a `datetime` object and not `date`.
+                # This is because we set `to_base_type=True`
+
+        :param model: The model to retrieve the field type
+        :type model: ndb.Model
+
+        :param filtr: a dictionary containing the field and value keys.
+        :type filtr: dict
+
+        :param to_base_type: when true, sets filtr['value'] to its base type. (default: False)
+        :type to_base_type: bool
+        """
+        modelProperty = getattr(model, filtr["field"])
+        if isinstance(modelProperty, ndb.DateProperty):
+            try:
+                # convert date string to a datetime object. (Convert to base type)
+                filtr['value'] = datetime.strptime(filtr['value'][:10], "%Y-%m-%d")
+                if not to_base_type:
+                    # Convert to date object
+                    filtr['value'] = filtr['value'].date()
+            except ValueError:
+                raise endpoints.BadRequestException("Invalid date format. Please use 'YYYY-MM-DD'")
+        elif isinstance(modelProperty, ndb.TimeProperty):
+            try:
+                # Convert to base type
+                filtr['value'] = datetime.strptime('1970-01-01T' + filtr['value'][:5], "%Y-%m-%dT%H:%M")
+                if not to_base_type:
+                    # Convert to time object
+                    filtr['value'] = filtr['value'].time()
+            except ValueError:
+                raise endpoints.BadRequestException("Invalid time format. Please use 'HH:MM'")
+        elif isinstance(modelProperty, ndb.IntegerProperty):
+            filtr["value"] = int(filtr["value"])
 
     @endpoints.method(SessionQueryForms,
                       SessionForms,
@@ -733,7 +815,7 @@ class ConferenceApi(remote.Service):
                       name='querySessions')
     def querySessions(self, request):
         """ Query for sessions. Uses `SESSION_FIELDS` and `OPERATORS` to construct query. """
-        sessions = self._querySessions(request.filters)
+        sessions = self._buildQuery(Session, request.filters, SESSION_FIELDS, order_by=['typeOfSession'])
         return SessionForms(items=[session.toForm() for session in sessions])
 
 
