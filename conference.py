@@ -147,6 +147,9 @@ class ConferenceApi(remote.Service):
             if data[df] in (None, []):
                 data[df] = DEFAULTS[df]
 
+        # add organizerUserId before checking the required fields
+        data['organizerUserId'] = user_id = getUserId(user)
+
         # check required fields
         for key in Conference.required_fields_schema:
             if not data[key]:
@@ -169,12 +172,10 @@ class ConferenceApi(remote.Service):
 
         # generate Profile Key based on user ID and Conference
         # ID based on Profile key get Conference key from ID
-        user_id = getUserId(user)
         p_key = ndb.Key(Profile, user_id)
         c_id = Conference.allocate_ids(size=1, parent=p_key)[0]
         c_key = ndb.Key(Conference, c_id, parent=p_key)
         data['key'] = c_key
-        data['organizerUserId'] = user_id
 
         # create Conference, send email to organizer confirming
         # creation of Conference & return (modified) ConferenceForm

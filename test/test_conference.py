@@ -284,7 +284,6 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         # first test using an invalid conference
         conf = {
             'name': 'New Conference',
-            'organizerUserId': self.getUserId(),
             'topics': ['misc'],
             'city': 'Baton Rouge',
             'startDate': str(now + datetime.timedelta(days=5)),
