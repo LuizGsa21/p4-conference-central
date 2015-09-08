@@ -704,16 +704,13 @@ class ConferenceApi(remote.Service):
                       path='profile/wishlist/{websafeSessionKey}',
                       http_method='DELETE',
                       name='removeSessionFromWishlist')
-    @ndb.transactional(xg=True)
+    @ndb.transactional()
     def removeSessionFromWishlist(self, request):
         """Deletes the given session from user's wish list"""
         # get user Profile
         prof = self._getProfileFromUser()
-        # get session and check if it exists
         key = ndb.Key(urlsafe=request.websafeSessionKey)
-        session = key.get()
-        if not session:
-            raise endpoints.BadRequestException("Session with key %s doesn't exist" % request.websafeSessionKey)
+        # get session the session key and check if it exists in user's wish list
         if key not in prof.wishList:
             raise endpoints.BadRequestException("Failed to find session in user's wishlist")
         # remove session from user's wishlist
