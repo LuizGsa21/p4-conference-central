@@ -3,12 +3,11 @@ import os
 import logging
 
 # https://cloud.google.com/appengine/docs/python/tools/localunittesting?hl=en#Python_Writing_Datastore_and_memcache_tests
-# Make sure your test runner has the appropriate libraries on the Python load path,
-# including the App Engine libraries, yaml (included in the App Engine SDK),
-# the application root, and any other modifications to the library path expected
-# by application code (such as a local ./lib directory, if you have one)
+# --- UPDATE PATHS
 sys.path.insert(1, '/usr/local/google_appengine')
 sys.path.insert(1, '/usr/local/google_appengine/lib/yaml/lib')
+# --- END UPDATE PATHS
+
 # add absolute path of parent directory so we can import conference and models
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 
