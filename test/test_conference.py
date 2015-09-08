@@ -255,6 +255,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
     def testGetProfile(self):
         """ TEST: Get user's profile  """
+        self.initDatabase()
         try:
             # only logged in users have a profile
             self.api.getProfile(message_types.VoidMessage())
@@ -264,8 +265,19 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
         # login and retrieve the profile
         self.login()
+        prof = ndb.Key(Profile, self.getUserId()).get()
+        # Add conferences to conferenceKeysToAttend so we can verify the returned keys are web safe
+        keys = Conference.query().fetch(keys_only=True)
+        prof.conferenceKeysToAttend = keys
+        prof.put()
+
         r = self.api.getProfile(message_types.VoidMessage())
         assert r.mainEmail == 'test1@test.com', 'Returned an invalid user profile'
+        assert len(r.conferenceKeysToAttend) > 0, 'Returned an invalid number of conference keys'
+        # verify that all keys are urlsafe
+        websafeKeys = [key.urlsafe() for key in keys]
+        for websafeKey in r.conferenceKeysToAttend:
+            assert websafeKey in websafeKeys, 'Returned an invalid key'
 
     def testCreateConference(self):
         """ TEST: Create new conference."""

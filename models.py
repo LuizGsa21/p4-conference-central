@@ -65,7 +65,7 @@ class Profile(ndb.Model):
             displayName=self.displayName,
             mainEmail=self.mainEmail,
             teeShirtSize=getattr(TeeShirtSize, self.teeShirtSize),
-            conferenceKeysToAttend=self.conferenceKeysToAttend
+            conferenceKeysToAttend=[key.urlsafe() for key in self.conferenceKeysToAttend]
         )
         form.check_initialized()
         return form
