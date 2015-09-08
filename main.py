@@ -27,7 +27,16 @@ class SetAnnouncementHandler(webapp2.RequestHandler):
 
 class SetFeaturedSpeaker(webapp2.RequestHandler):
     def post(self):
-        """Set featured speaker in Memcache."""
+        """Set featured speaker in Memcache.
+        Note:
+            The featured speaker is only updated if there is more than
+            one session by the given speaker in the provided conference (websafeConferenceKey)
+            GET params:
+                - websafeConferenceKey
+                    The conference to check for the given speaker
+                - speaker
+                    The possibly new featured speaker
+        """
 
         # get conference key
         key = ndb.Key(urlsafe=self.request.get('websafeConferenceKey'))
