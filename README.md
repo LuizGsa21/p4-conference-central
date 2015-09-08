@@ -1,12 +1,47 @@
 # Conference Central
-Conference Central is a cloud-based API server built on Google Cloud Platform.
+Conference Central is a cloud-based API server built on Google Cloud Platform. 
+This project is part of [Udacity’s Full Stack Web Developer Nanodegree](https://www.udacity.com/course/nd004).
 
-The API supports the following functionalities:
-- User authentication
+The API supports the following functionality:
+
+- User authentication 
 - Create, read, update conferences and sessions
+- Supports multi-inequality queries for Conferences and Sessions
 - Register/unregister for conferences
 - Add/remove sessions to user's wish list
-- Supports multi inequality queries for Conferences and Sessions
+- Task Queues and Cron Jobs such as:
+    - Email confirmation upon conference creation
+    - Update conference announcements in Memcache. (updates every hour)
+    - Update most recent featured speaker in Memcache. (checked after session creation)  
+
+You can checkout the website demo [here][9]. Currently, the demo does not support all functionality. 
+To access all functionality you must use [API Explorer][8]
+
+## NDB Entities (Models)
+- Profile:
+    - is an "ancestor" of Conference, for the conference creator
+    - "has" Conferences, when registering to a conference
+    - "has" Sessions, when adding session to user's wish list
+- Conference:
+    - is a sibling of Profile
+    - is an "ancestor" of sessions
+- Session:
+    - is a sibling of Conference
+
+Conference was chosen to be an ancestor of Session so we can use the conference key to obtain all sessions registered in the conference.
+If we implemented a "has a" relationship, we would first have to query the conference inorder to obtain the session keys. Then make an additional query to retrieve the sessions. 
+
+Note:
+- Speaker is currently being represented as a string property in the Session entity.
+- Any properties that represented a date, YYY-MM-DD, or a time, HH:MM, were updated to to use DateProperty and TimeProperty. This includes the Conference entity which initially used StringProperty.
+
+
+
+## Task 3: The Query Problem
+
+Let’s say that you don't like workshops and you don't like sessions after 7 pm. How would you handle a query for all non-workshop sessions before 7 pm? What is the problem for implementing this query? What ways to solve it did you think of?
+
+To find the solution to the query problem search for `testTask3QueryProblem` in [test/test_conference.py](test/test_conference.py)
 
 ## Products
 - [App Engine][1]
@@ -16,11 +51,15 @@ The API supports the following functionalities:
 
 ## APIs
 - [Google Cloud Endpoints][3]
+- [NDB Datastore API][10]
+- [Memcache API][11]
+- [Mail API][12]
 
-## How To Run Tests
-1. In file `test/runner.py`, locate the comment `UPDATE PATHS` and update the current paths to include the App Engine libraries and yaml (included in the App Engine SDK). If you are using a Mac and used Google App Engine SDK installer, you will most likely not have to change anything :)
-2. To run all tests, open the terminal in your projects root directory and run `python test/runner.py`
-For those having trouble with step one, please checkout this [guide][7]
+## How to Run Tests
+1. In [test/runner.py](test/runner.py), locate the comment `UPDATE PATHS` and update the current paths to include the App Engine libraries and yaml (included in the App Engine SDK). If you are using a Mac and used Google App Engine SDK installer, you will most likely not have to change anything :)
+    - If you are still having trouble with this step, please checkout this [guide][7]
+2. To run all tests, open the terminal in your projects root directory then run: `python test/runner.py`
+
 
 ## How to Run on Local Server
 1. Update the value of `application` in `app.yaml` to the app ID you
@@ -44,3 +83,8 @@ For those having trouble with step one, please checkout this [guide][7]
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
 [7]: https://cloud.google.com/appengine/docs/python/tools/localunittesting?hl=en#Python_Writing_Datastore_and_memcache_tests
+[8]: https://apis-explorer.appspot.com/apis-explorer/?base=https://compact-arc-103415.appspot.com/_ah/api#p/conference/v1/
+[9]: https://compact-arc-103415.appspot.com/#/
+[10]: https://cloud.google.com/appengine/docs/python/ndb/
+[11]: https://cloud.google.com/appengine/docs/python/memcache/
+[12]: https://cloud.google.com/appengine/docs/python/mail/

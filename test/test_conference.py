@@ -214,7 +214,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         # verify database fixture
         prof = ndb.Key(Profile, self.getUserId()).get()
         session = Session.query(Session.name == 'Intro to Poker').get()
-        assert session and len(prof.wishList) == 0,\
+        assert session and len(prof.wishList) == 0, \
             "This shouldn't fail. Maybe someone messed with database fixture"
         # manually add a session to user's wishlist
         prof.wishList.append(session.key)
@@ -590,16 +590,27 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         # Verify featured speaker has been updated
         response = self.api.getFeaturedSpeaker(message_types.VoidMessage())
         data = response.data
-        assert 'hitler' in data and\
-               'PHP' in data and\
-               'Python' in data, 'Failed to update featured speaker'
+        memData = memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY)
+        assert 'hitler' in memData and \
+               'PHP' in memData and \
+               'Python' in memData, 'Failed to add featured speaker to memcache'
+        assert 'hitler' in data and \
+               'PHP' in data and \
+               'Python' in data, 'Returned an invalid featured speaker'
 
     def testTask3QueryProblem(self):
         """ TEST: Solve task 3 "the query related problem"  """
         # Solve the following query related problem:
-        # - Let's say that you don't like workshops and you don't like sessions after 7 pm.
+        #   Let's say that you don't like workshops and you don't like sessions after 7 pm.
         #   How would you handle a query for all non-workshop sessions before 7 pm?
-        #   What is the problem for implementing this query? What ways to solve it did you think of?
+        #   What is the problem for implementing this query?
+        #       - A query can have no more than one not-equal filter, and a query
+        #         that has one cannot have any other inequality filters
+        #   What ways to solve it did you think of?
+        #       - One way to solve this problem is to let datastore handle the first inequality.
+        #         Any additional inequalities should be implemented in python.
+        #         As a solution to this problem both `queryConferences()` and `querySessions()` endpoints
+        #         support multi inequality queries
 
         # init and verify database fixture
         self.initDatabase()

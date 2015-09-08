@@ -673,7 +673,7 @@ class ConferenceApi(remote.Service):
                       http_method='POST',
                       name='createSession')
     def createSession(self, request):
-        """Create or update Session object, returning SessionForm/request."""
+        """Creates a session, open to the organizer of the conference"""
         return self._createSessionObject(request)
 
     @endpoints.method(SESSION_WISHLIST_POST_REQUEST,
