@@ -18,8 +18,9 @@ The API supports the following functionalities:
 - [Google Cloud Endpoints][3]
 
 ## How To Run Tests
-1. In `test/runner.py`, below the comment `UPDATE PATHS`, update the current paths to include the App Engine libraries and yaml (included in the App Engine SDK). If you are using a Mac and used google app engine SDK installer, you will most likely not have to change anything :)
+1. In file `test/runner.py`, locate the comment `UPDATE PATHS` and update the current paths to include the App Engine libraries and yaml (included in the App Engine SDK). If you are using a Mac and used Google App Engine SDK installer, you will most likely not have to change anything :)
 2. To run all tests, open the terminal in your projects root directory and run `python test/runner.py`
+For those having trouble with step one, please checkout this [guide][7]
 
 ## How to Run on Local Server
 1. Update the value of `application` in `app.yaml` to the app ID you
@@ -42,3 +43,4 @@ The API supports the following functionalities:
 [4]: https://console.developers.google.com/
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
+[7]: https://cloud.google.com/appengine/docs/python/tools/localunittesting?hl=en#Python_Writing_Datastore_and_memcache_tests
