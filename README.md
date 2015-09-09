@@ -27,21 +27,51 @@ To access all functionality you must use [API Explorer][8]
     - is an "ancestor" of sessions
 - Session:
     - is a sibling of Conference
+    - contains a Speaker (structured property)
+- Speaker:
+    - is a structured property. 
+
+Sessions can have speakers that are not registered users. For this reason, `Speaker` was chosen to be a structured property. Structured properties are defined using the same syntax as model classes but they are not full-fledged entities.
 
 Conference was chosen to be an ancestor of Session so we can use the conference key to obtain all sessions registered in the conference.
-If we implemented a "has a" relationship, we would first have to query the conference inorder to obtain the session keys. Then make an additional query to retrieve the sessions. 
+If we implemented a "has a" relationship, we would first have to query the conference to obtain the session keys, then make an additional query to retrieve the sessions.
 
 Note:
-- Speaker is currently being represented as a string property in the Session entity.
-- Any properties that represented a date, YYY-MM-DD, or a time, HH:MM, were updated to to use DateProperty and TimeProperty. This includes the Conference entity which initially used StringProperty.
+- Any properties that represented a date, YYY-MM-DD, or a time, HH:MM, were updated to to use DateProperty and TimeProperty.
 
 
 
 ## Task 3: The Query Problem
 
-Let’s say that you don't like workshops and you don't like sessions after 7 pm. How would you handle a query for all non-workshop sessions before 7 pm? What is the problem for implementing this query? What ways to solve it did you think of?
+Let’s say that you don't like workshops and you don't like sessions after 7 pm. 
+How would you handle a query for all non-workshop sessions before 7 pm?
+- `Session.query(Session.typeOfSession != 'workshop', Session.startTime < '19:00')`
 
-To find the solution to the query problem search for `testTask3QueryProblem` in [test/test_conference.py](test/test_conference.py)
+What is the problem for implementing this query?
+- NDB Datastore API doesn't support using inequalities for multiple properties.
+
+What ways to solve it did you think of?
+- One way to solve this problem is to let datastore handle the first inequality and any additional inequalities should be implemented in python.
+
+The test case `testTask3QueryProblem` found in [test/test_conference.py](test/test_conference.py), solves this problem in a testing environment.
+
+## Additional Queries
+
+`removeSessionFromWishlist()` - Removes the given session from user's wish list.
+
+`querySessions()` - Given a `SessionQueryForms`, returns a set of filtered sessions.
+
+The following filters are supported:
+
+ - NAME
+ - DURATION
+ - TYPE_OF_SESSION
+ - DATE
+ - START_TIME
+ - SPEAKER
+
+Both `querySessions` and `queryConferences` have been redone to support multiple inequality filters.
+
 
 ## Products
 - [App Engine][1]
