@@ -17,7 +17,8 @@ from google.appengine.api import app_identity
 from google.appengine.api import mail, memcache
 from google.appengine.ext import ndb
 from conference import ConferenceApi, MEMCACHE_FEATURED_SPEAKER_KEY
-from models import Session
+from models import Session, Speaker
+
 
 class SetAnnouncementHandler(webapp2.RequestHandler):
     def get(self):
@@ -40,14 +41,14 @@ class SetFeaturedSpeaker(webapp2.RequestHandler):
 
         # get conference key
         key = ndb.Key(urlsafe=self.request.get('websafeConferenceKey'))
-        speaker = self.request.get('speaker')
+        speaker = Speaker(name=self.request.get('speaker'))
         # get all sessions registered to this conference filtered by speaker
         featured_sessions = Session.query(ancestor=key).filter(Session.speaker == speaker).fetch()
 
         # If speaker is registered to more than one session, update featured speaker
         if len(featured_sessions) > 1:
             session_names = [session.name for session in featured_sessions]
-            message = speaker + ': ' + ', '.join(session_names)
+            message = speaker.name + ': ' + ', '.join(session_names)
             memcache.set(MEMCACHE_FEATURED_SPEAKER_KEY, message)
 
         self.response.set_status(204)

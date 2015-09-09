@@ -161,6 +161,9 @@ class ConferenceQueryForms(messages.Message):
     """ConferenceQueryForms -- multiple ConferenceQueryForm inbound form message"""
     filters = messages.MessageField(ConferenceQueryForm, 1, repeated=True)
 
+class Speaker(ndb.Model):
+    """Speaker -- Speaker object"""
+    name = ndb.StringProperty(required=True)
 
 class Session(ndb.Model):
     """Session -- Session object"""
@@ -168,7 +171,7 @@ class Session(ndb.Model):
 
     name = ndb.StringProperty(required=True)
     highlights = ndb.StringProperty()
-    speaker = ndb.StringProperty(required=True)
+    speaker = ndb.StructuredProperty(modelclass=Speaker, required=True)
     duration = ndb.IntegerProperty(required=True)
     typeOfSession = ndb.StringProperty(required=True)
     date = ndb.DateProperty(required=True)
@@ -179,7 +182,7 @@ class Session(ndb.Model):
             websafeKey=self.key.urlsafe(),
             name=self.name,
             highlights=self.highlights,
-            speaker=self.speaker,
+            speaker=self.speaker.name,
             duration=self.duration,
             typeOfSession=self.typeOfSession,
             date=self.date.strftime('%Y-%m-%d'),

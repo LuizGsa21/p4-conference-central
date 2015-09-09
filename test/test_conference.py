@@ -42,7 +42,8 @@ from models import (
     SessionForms,
     SessionQueryForm,
     SessionQueryForms,
-    ConflictException
+    ConflictException,
+    Speaker
 )
 import main
 import webapp2
@@ -157,6 +158,9 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
             'startTime': '11:00',
             'duration': 100
         }
+
+        form = SessionForm(**sessionFields)
+        form.check_initialized()
         container = SESSION_POST_REQUEST.combined_message_class(
             websafeConferenceKey=conf.key.urlsafe(),
             **sessionFields
@@ -559,7 +563,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         # Verify database fixture
         speakers = {}
         for session in Session.query():
-            assert speakers.get(session.speaker, None) is None, \
+            assert speakers.get(session.speaker.name, None) is None, \
                 "This shouldn't fail. Maybe someone messed with database fixture"
             speakers[session.name] = session.key
         assert None == memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY), \
@@ -582,6 +586,8 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
         ]
         initial_count = Session.query().count()
         for session in sessions:
+            form = SessionForm(**session)
+            form.is_initialized()
             container = SESSION_POST_REQUEST.combined_message_class(
                 websafeConferenceKey=conf.key.urlsafe(),
                 **session
@@ -612,18 +618,6 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
     def testTask3QueryProblem(self):
         """ TEST: Solve task 3 "the query related problem"  """
-        # Solve the following query related problem:
-        #   Let's say that you don't like workshops and you don't like sessions after 7 pm.
-        #   How would you handle a query for all non-workshop sessions before 7 pm?
-        #   What is the problem for implementing this query?
-        #       - A query can have no more than one not-equal filter, and a query
-        #         that has one cannot have any other inequality filters
-        #   What ways to solve it did you think of?
-        #       - One way to solve this problem is to let datastore handle the first inequality.
-        #         Any additional inequalities should be implemented in python.
-        #         As a solution to this problem both `queryConferences()` and `querySessions()` endpoints
-        #         support multi inequality queries
-
         # init and verify database fixture
         self.initDatabase()
         workshopSessions = Session.query(Session.typeOfSession == 'workshop').fetch()
@@ -651,7 +645,7 @@ class ConferenceTestCase(BaseEndpointAPITestCase):
 
         # ----- Attempt a 9 inequality query -----------
         # Create a unique session
-        uniqueSession = {'name': 'BONUS ROUND', 'speaker': 'BONUS ROUND', 'typeOfSession': 'BONUS ROUND',
+        uniqueSession = {'name': 'BONUS ROUND', 'speaker': Speaker(name='BONUS ROUND'), 'typeOfSession': 'BONUS ROUND',
                          'date': datetime.datetime.strptime('2015-12-12', '%Y-%m-%d'),
                          'startTime': datetime.time(hour=3), 'duration': 200}
         # verify this session is unique

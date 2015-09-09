@@ -39,6 +39,7 @@ from models import Session
 from models import SessionForm
 from models import SessionForms
 from models import SessionQueryForms
+from models import Speaker
 
 from settings import WEB_CLIENT_ID
 from settings import ANDROID_CLIENT_ID
@@ -605,7 +606,7 @@ class ConferenceApi(remote.Service):
     def getSessionsBySpeaker(self, request):
         """Given a speaker, return all sessions given by this particular speaker, across all conferences"""
 
-        sessions = Session.query(Session.speaker == request.speaker)
+        sessions = Session.query(Session.speaker == Speaker(name=request.speaker))
 
         # Return a set of SessionForm objects per session
         return SessionForms(items=[session.toForm() for session in sessions])
@@ -651,6 +652,7 @@ class ConferenceApi(remote.Service):
         if data['date'] < conf.startDate or data['date'] > conf.endDate:
             raise endpoints.BadRequestException("Session must be within range of conference start and end date")
 
+        data['speaker'] = Speaker(name=data['speaker'])
         # ask Datastore to allocate an ID.
         s_id = Session.allocate_ids(size=1, parent=conf.key)[0]
         # Datastore returns an integer ID that we can use to create a session key
@@ -661,7 +663,7 @@ class ConferenceApi(remote.Service):
 
         # Add a task to check and update new featured speaker
         taskqueue.add(
-            params={'websafeConferenceKey': conf.key.urlsafe(), 'speaker': session.speaker},
+            params={'websafeConferenceKey': conf.key.urlsafe(), 'speaker': session.speaker.name},
             url='/tasks/set_featured_speaker'
         )
 
